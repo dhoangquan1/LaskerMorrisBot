@@ -43,6 +43,7 @@ public class GameConstants {
             Map.entry("e5", new String[]{"d5", "e4"}),
             Map.entry("b6", new String[]{"b4", "d6"}),
             Map.entry("d6", new String[]{"b6", "d7", "d5", "f6"}),
+            Map.entry("f6", new String[]{"d6", "f4"}),
             Map.entry("a7", new String[]{"a4", "d7"}),
             Map.entry("d7", new String[]{"a7", "g7"}),
             Map.entry("g7", new String[]{"d7", "g4"})

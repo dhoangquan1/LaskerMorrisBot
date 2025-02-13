@@ -42,21 +42,13 @@ public class Player {
             //Game playing with minimax
             if(!input.startsWith("END")) {
                 State bestMove = IterativeDeepening();
+                String m1 = bestMove.moveSet[0];
+                String m2 = bestMove.moveSet[1];
+                String m3 = bestMove.moveSet[2];
 
                 //Report the move to the referee
-                System.out.println(bestMove);
+                System.out.printf("%s %s %s\n", m1,m2,m3);
                 System.out.flush();
-
-                //After move, check for win and declare it
-                String terminal = checkTerminal(curr_state);
-                if(!terminal.equals("None")){
-                    if(terminal.equals("Tie")){
-                        System.out.println("The game ended in a tie.");
-                    }else {
-                        System.out.printf("Player %s has won the game!\n", terminal);
-                    }
-                    break;
-                }
             }
         }
     }
@@ -142,9 +134,7 @@ public class Player {
         return util;
     }
 
-    public static int checkUtility(State state){
-        return 0;
-    }
+
 
     public static String checkGameOver(State state){
         return "None";
@@ -163,6 +153,128 @@ public class Player {
     public static boolean checkIllegalMove(String move){
         return false;
     }
+
+    //____________________________________________________________________
+    //                    HEURISTICS UTILITY RELATED CODES
+    //____________________________________________________________________
+    public static int checkUtility(State state){
+        int eval = 0;
+        eval += checkUtil_ClosedMills(state);
+        eval += checkUtil_MillsCount(state);
+        eval += checkUtil_BlockedPieces(state);
+        eval += checkUtil_PiecesLeft(state);
+        eval += checkUtil_PiecesConfig(state);
+
+        return eval;
+    }
+
+    //Heuristic 1: If a mill is last closed by a player, and a stone is captured
+    public static int checkUtil_ClosedMills(State state){
+        String lastTaken = state.moveSet[2];
+        if(lastTaken.equals(playerStone)){
+            return -1;
+        }else if(lastTaken.equals(oppStone)){
+            return 1;
+        }
+        return 0;
+    }
+
+    //Heuristic 2: The difference in the number of mills
+    public static int checkUtil_MillsCount(State state){
+        int playerMillCount = state.playerMill.size();
+        int oppMillCount = state.oppMill.size();
+        return (playerMillCount - oppMillCount) * 2;
+    }
+
+    //Heuristic 3: The difference in blocked pieces
+    public static int checkUtil_BlockedPieces(State state){
+        int playerBlocked = 0;
+        int oppBlocked = 0;
+        for(String move: GameConstants.ADJACENT_MOVES.keySet()){
+            if(!state.board.get(move).equals("")){
+                String[] moveSet = GameConstants.ADJACENT_MOVES.get(move);
+                boolean blocked = true;
+                for(String neighbor: moveSet){
+                    if (state.board.get(neighbor).equals("")){
+                        blocked = false;
+                        break;
+                    }
+                }
+                if(blocked){
+                    if(move.equals(playerStone)){
+                        playerBlocked++;
+                    }else if(move.equals(oppStone)){
+                        oppBlocked++;
+                    }
+                }
+            }
+        }
+        return (oppBlocked - playerBlocked) * 3;
+    }
+
+    //Heuristic 4: The difference in total pieces left
+    public static int checkUtil_PiecesLeft(State state){
+        int playerPieces = state.stoneHand[0] + state.stonePlaced[0];
+        int oppPieces = state.stoneHand[1] + state.stonePlaced[1];
+        return (playerPieces - oppPieces) * 4;
+    }
+
+    //Heuristic 5-6: Difference in two and three-piece config where 1 more piece is needed to form a mill
+    public static int checkUtil_PiecesConfig(State state){
+        int playerTwoPieceConfig = 0;
+        int oppTwoPieceConfig = 0;
+
+        int playerThreePieceConfig = 0;
+        int oppThreePieceConfig = 0;
+
+        HashMap<String, Integer> playerConfig = new HashMap<>();
+        HashMap<String, Integer> oppConfig = new HashMap<>();
+
+        for (List<String> c: GameConstants.MILL_CONDITIONS){
+            int emptyPiece = 0;
+            int playerPiece = 0;
+            int oppPiece = 0;
+            String emptyPieceMove = "";
+            for (String move: c){
+                String piece = state.board.get(move);
+                if (piece.equals(playerStone)){
+                    playerPiece++;
+                }else if(piece.equals(oppStone)){
+                    oppPiece++;
+                }else {
+                    emptyPiece++;
+                    emptyPieceMove = move;
+                }
+            }
+            if(oppPiece==2 && playerPiece==0){
+                for(String move: c){
+                    if(!move.equals(emptyPieceMove)){
+                        oppConfig.merge(move, 1, Integer::sum);
+                        if(oppConfig.get(move) == 2){
+                            oppThreePieceConfig++;
+                        }
+                    }
+                }
+                oppTwoPieceConfig++;
+            }
+            if(playerPiece==2 && oppPiece==0){
+                for(String move: c){
+                    if(!move.equals(emptyPieceMove)){
+                        playerConfig.merge(move, 1, Integer::sum);
+                        if(playerConfig.get(move) == 2){
+                            playerThreePieceConfig++;
+                        }
+                    }
+                }
+                playerTwoPieceConfig++;
+            }
+        }
+
+        int twoPieceEval = (playerTwoPieceConfig - oppTwoPieceConfig) * 5;
+        int threePieceEval = (playerThreePieceConfig - oppThreePieceConfig) * 6;
+        return twoPieceEval + threePieceEval;
+    }
+
 
 
     //____________________________________________________________________
@@ -201,6 +313,7 @@ public class Player {
                 getSuccessors_captureStone(tempS, playerType, successors);
             }else {
                 successors.add(tempS);
+                tempS.moveSet[2] = "r0";
             }
         }
     }
@@ -221,6 +334,7 @@ public class Player {
                             getSuccessors_captureStone(tempS, playerType, successors);
                         }else {
                             successors.add(tempS);
+                            tempS.moveSet[2] = "r0";
                         }
                     }
                 }
@@ -243,6 +357,7 @@ public class Player {
                         getSuccessors_captureStone(tempS, playerType, successors);
                     }else {
                         successors.add(tempS);
+                        tempS.moveSet[2] = "r0";
                     }
                 }
             }
