@@ -159,12 +159,24 @@ public class Player {
     //____________________________________________________________________
     public static int checkUtility(State state){
         int eval = 0;
-        eval += checkUtil_ClosedMills(state);
-        eval += checkUtil_MillsCount(state);
-        eval += checkUtil_BlockedPieces(state);
-        eval += checkUtil_PiecesLeft(state);
-        eval += checkUtil_PiecesConfig(state);
-
+        if(state.phase == 1){
+            eval += checkUtil_ClosedMills(state) * 18;
+            eval += checkUtil_MillsCount(state) * 26;
+            eval += checkUtil_BlockedPieces(state);
+            eval += checkUtil_PiecesLeft(state) * 9;
+            eval += checkUtil_PiecesConfig(state);
+        }else if(state.phase == 2){
+            eval += checkUtil_ClosedMills(state) * 14;
+            eval += checkUtil_MillsCount(state) * 43;
+            eval += checkUtil_BlockedPieces(state) * 10;
+            eval += checkUtil_PiecesLeft(state) * 11;
+            eval += checkUtil_DoubleMillsCount(state) * 8;
+            eval += checkUtil_WinGame(state) * 1086;
+        }else {
+            eval += checkUtil_ClosedMills(state) * 16;
+            eval += checkUtil_PiecesConfig(state);
+            eval += checkUtil_WinGame(state) * 1190;
+        }
         return eval;
     }
 
@@ -183,7 +195,7 @@ public class Player {
     public static int checkUtil_MillsCount(State state){
         int playerMillCount = state.playerMill.size();
         int oppMillCount = state.oppMill.size();
-        return (playerMillCount - oppMillCount) * 2;
+        return (playerMillCount - oppMillCount);
     }
 
     //Heuristic 3: The difference in blocked pieces
@@ -209,14 +221,14 @@ public class Player {
                 }
             }
         }
-        return (oppBlocked - playerBlocked) * 3;
+        return (oppBlocked - playerBlocked);
     }
 
     //Heuristic 4: The difference in total pieces left
     public static int checkUtil_PiecesLeft(State state){
         int playerPieces = state.stoneHand[0] + state.stonePlaced[0];
         int oppPieces = state.stoneHand[1] + state.stonePlaced[1];
-        return (playerPieces - oppPieces) * 4;
+        return (playerPieces - oppPieces);
     }
 
     //Heuristic 5-6: Difference in two and three-piece config where 1 more piece is needed to form a mill
@@ -270,12 +282,53 @@ public class Player {
             }
         }
 
-        int twoPieceEval = (playerTwoPieceConfig - oppTwoPieceConfig) * 5;
-        int threePieceEval = (playerThreePieceConfig - oppThreePieceConfig) * 6;
+        int twoMultiplier = 10;
+        int threeMultipler = (state.phase == 1) ? 7 : 1;
+        int twoPieceEval = (playerTwoPieceConfig - oppTwoPieceConfig) * twoMultiplier;
+        int threePieceEval = (playerThreePieceConfig - oppThreePieceConfig) * threeMultipler;
         return twoPieceEval + threePieceEval;
     }
 
+    //Heuristic 7: The difference in the number of mills that share a common piece
+    public static int checkUtil_DoubleMillsCount(State state){
+        HashMap<String, Integer> playerMillMap = new HashMap<>();
+        HashMap<String, Integer> oppMillMap = new HashMap<>();
 
+        int playerDMill = 0;
+        int oppDMill = 0;
+
+        for(List<String> c: state.playerMill){
+            for(String move: c){
+                playerMillMap.merge(move, 1, Integer::sum);
+                if(playerMillMap.get(move) == 2){
+                    playerDMill++;
+                }
+            }
+        }
+
+        for(List<String> c: state.oppMill){
+            for(String move: c){
+                oppMillMap.merge(move, 1, Integer::sum);
+                if(oppMillMap.get(move) == 2){
+                    oppDMill++;
+                }
+            }
+        }
+
+        return (playerDMill - oppDMill);
+    }
+
+    //Heuristic 8: The difference in the number of mills that share a common piece
+    public static int checkUtil_WinGame(State state){
+        int playerStoneLeft = state.stoneHand[0] + state.stonePlaced[0];
+        int oppStoneLeft = state.stoneHand[1] + state.stonePlaced[1];
+        if(playerStoneLeft < 3){
+            return -1;
+        }else if(oppStoneLeft < 3){
+            return 1;
+        }
+        return 0;
+    }
 
     //____________________________________________________________________
     //                    SUCCESSORS RELATED CODES
@@ -303,6 +356,7 @@ public class Player {
     public static void getSuccessors_HandtoBoard(State state, int playerType, ArrayList<State> successors){
         for(String move: state.openSlots){
             State tempS = new State(state);
+            tempS.phase = 1;
             tempS.board.put(move, stoneType);
             tempS.stoneHand[playerType]--;
             tempS.stonePlaced[playerType]++;
@@ -324,6 +378,7 @@ public class Player {
                 for(String neighbor: GameConstants.ADJACENT_MOVES.get(move)){
                     if(state.board.get(neighbor).equals("")){
                         State tempS = new State(state);
+                        tempS.phase = 2;
                         tempS.board.put(move, "");
                         tempS.board.put(neighbor, stoneType);
                         tempS.openSlots.add(move);
@@ -347,6 +402,7 @@ public class Player {
             if(state.board.get(move).equals(stoneType)){
                 for(String open: state.openSlots){
                     State tempS = new State(state);
+                    tempS.phase = 3;
                     tempS.board.put(move, "");
                     tempS.board.put(open, stoneType);
                     tempS.openSlots.add(move);

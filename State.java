@@ -16,6 +16,7 @@ public class State {
 
     //Storing the move that last made to this board
     public String[] moveSet = new String[3];
+    public int phase = 1;
 
     public State(){
         this.board = new HashMap<>();
@@ -39,7 +40,7 @@ public class State {
     }
 
     //This allows copying board configuration for children without linking the parent
-    public State(HashMap<String, String> board, int[] stoneHand, int[] stonePlaced, ArrayList<List<String>> playerMill, ArrayList<List<String>> oppMill, ArrayList<String> openSlots, String[] moveSet){
+    public State(HashMap<String, String> board, int[] stoneHand, int[] stonePlaced, ArrayList<List<String>> playerMill, ArrayList<List<String>> oppMill, ArrayList<String> openSlots, String[] moveSet, int phase){
         this.board = new HashMap<>(board);
         this.stoneHand = stoneHand.clone();
         this.stonePlaced = stonePlaced.clone();
@@ -50,10 +51,11 @@ public class State {
         this.moveSet[0] = moveSet[0];
         this.moveSet[1] = moveSet[1];
         this.moveSet[2] = moveSet[2];
+        this.phase = phase;
     }
 
     public State(State state){
-        this(state.board, state.stoneHand, state.stonePlaced, state.playerMill, state.oppMill, state.openSlots, state.moveSet);
+        this(state.board, state.stoneHand, state.stonePlaced, state.playerMill, state.oppMill, state.openSlots, state.moveSet, state.phase);
     }
 
     /**
