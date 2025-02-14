@@ -87,4 +87,27 @@ public class State {
         return false;
     }
 
+    /**
+     * This check if the recent move formed a mill with out updating the state
+     * For the purpose of checking moves are legal
+     * @param move : the move that was made
+     * @param stoneType : the stone type of that move
+     * @return true if the move formed a mill
+     */
+    public Boolean checkMoveMadeMillNoUpdate(String move, String stoneType){
+        for (List<String> c: GameConstants.MILL_CONDITIONS){
+            if(c.contains(move)){
+                if(this.board.get(c.get(0)).equals(stoneType)){
+                    String m1 = this.board.get(c.get(0));
+                    String m2 = this.board.get(c.get(1));
+                    String m3 = this.board.get(c.get(2));
+                    if (m1.equals(m2) && m2.equals(m3)){
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
 }
