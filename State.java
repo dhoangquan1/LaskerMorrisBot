@@ -35,8 +35,10 @@ public class State {
         openSlots.add("a4"); openSlots.add("b4"); openSlots.add("c4"); openSlots.add("e4"); openSlots.add("f4"); openSlots.add("g4");
         openSlots.add("c3"); openSlots.add("d3"); openSlots.add("e3");
         openSlots.add("b2"); openSlots.add("d2"); openSlots.add("f2");
-        openSlots.add("a1"); openSlots.add("d1"); openSlots.add("g1"); 
+        openSlots.add("a1"); openSlots.add("d1"); openSlots.add("g1");
 
+        stoneHand[0] = 10;
+        stoneHand[1] = 10;
     }
 
     //This allows copying board configuration for children without linking the parent
@@ -73,9 +75,9 @@ public class State {
                     String m3 = this.board.get(c.get(2));
                     if (m1.equals(m2) && m2.equals(m3)){
                         if(stoneType.equals(Player.playerStone)){
-                            playerMill.add(c);
+                            this.playerMill.add(c);
                         }else{
-                            oppMill.add(c);
+                            this.oppMill.add(c);
                         }
                         return true;
                     }

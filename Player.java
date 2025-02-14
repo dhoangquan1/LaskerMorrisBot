@@ -1,4 +1,5 @@
 import java.util.*;
+import java.util.concurrent.AbstractExecutorService;
 
 public class Player {
     public static State curr_state = new State();
@@ -8,7 +9,8 @@ public class Player {
     public static String oppHand = "";
     public static String stoneType = "";
 
-    public static long timeLimit = 4500;
+    public static int tempUtil = 0;
+    public static long timeLimit = 2_200_000_000L;
 
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
@@ -31,12 +33,7 @@ public class Player {
                 oppStone = "O";
                 oppHand = "h2";
             }else {
-                //Checking for illegal move
-                if(checkIllegalMove(input)){
-                    System.out.println("The opponent did an illegal move!");
-                    break;
-                }
-                curr_state.board.put(input, oppStone);
+                process_opponent_move(input);
             }
 
             //Game playing with minimax
@@ -46,40 +43,45 @@ public class Player {
                 String m2 = bestMove.moveSet[1];
                 String m3 = bestMove.moveSet[2];
 
+                curr_state = bestMove;
+                //printALLTestsInfo();
+
                 //Report the move to the referee
                 System.out.printf("%s %s %s\n", m1,m2,m3);
                 System.out.flush();
+
             }
         }
     }
 
     public static State IterativeDeepening() {
-        long startTime = System.currentTimeMillis();
+        long startTime = System.nanoTime();
         int depth = 1;
         State bestMove = null;
 
-        while (System.currentTimeMillis() - startTime < timeLimit) {
-            bestMove = MinimaxDecision(curr_state, startTime, depth);
+        while (System.nanoTime() - startTime < timeLimit) {
+            State newMove = MinimaxDecision(startTime, depth);
+            if(newMove != null && System.nanoTime() - startTime < timeLimit){
+                bestMove = newMove;
+            }
             depth++;
         }
-
         return bestMove;
     }
 
     /**
      * MinimaxDecision is the minimax algorithm with pruning
      * This function decides the next best move
-     * @param state the current state configuration
      * @return the String of the next best move
      */
-    public static State MinimaxDecision(State state, long startTime, int depth){
+    public static State MinimaxDecision(long startTime, int depth){
         int bestUtil = Integer.MIN_VALUE;
         State bestMove = null;
         int a = Integer.MIN_VALUE;
         int b = Integer.MAX_VALUE;
 
         for(State tempS: getSuccessors(curr_state, 0)){
-            int nextMoveUtil = MinValue(tempS, a, b, depth, startTime);
+            int nextMoveUtil = MinValue(tempS, a, b, depth-1, startTime);
             if(nextMoveUtil > bestUtil){
                 bestUtil = nextMoveUtil;
                 bestMove = tempS;
@@ -97,7 +99,10 @@ public class Player {
      * @return the maximized utility value of this state
      */
     public static int MaxValue(State state, int a, int b, int depth, long startTime){
-        if (System.currentTimeMillis() - startTime < timeLimit || depth == 0){
+        if (System.nanoTime() - startTime >= timeLimit) {
+            return Integer.MIN_VALUE;
+        }
+        if(depth == 0){
             return checkUtility(state);
         }
         int util = Integer.MIN_VALUE;
@@ -120,12 +125,15 @@ public class Player {
      * @return the minimized utility value of this state
      */
     public static int MinValue(State state, int a, int b, int depth, long startTime){
-        if (System.currentTimeMillis() - startTime < timeLimit || depth == 0){
+        if (System.nanoTime() - startTime >= timeLimit) {
+            return Integer.MAX_VALUE;
+        }
+        if(depth == 0){
             return checkUtility(state);
         }
         int util = Integer.MAX_VALUE;
         for (State s: getSuccessors(state, 1)){
-            util = Math.min(util, MaxValue(s, a, b, depth, startTime));
+            util = Math.min(util, MaxValue(s, a, b, depth-1, startTime));
             if(util <= a){
                 return util;
             }
@@ -134,24 +142,36 @@ public class Player {
         return util;
     }
 
+    public static void process_opponent_move(String move) {
+        String[] new_moves = move.split(" ");
 
+        if (new_moves[0].startsWith("h")) {
+            // placing //
+            curr_state.board.put(new_moves[1], oppStone);
+            curr_state.stoneHand[1]--;
+            curr_state.stonePlaced[1]++;
+            curr_state.openSlots.remove(new_moves[1]);
+            curr_state.checkMoveMadeMill(new_moves[1], oppStone);
+        } else {
+            // moving //
+            curr_state.board.put(new_moves[0], "");
+            curr_state.openSlots.add(new_moves[0]);
+            curr_state.board.put(new_moves[1], oppStone);
+            curr_state.openSlots.remove(new_moves[1]);
+            curr_state.oppMill.removeIf(mill -> mill.contains(new_moves[0]));
+            curr_state.checkMoveMadeMill(new_moves[1], oppStone);
+        }
 
-    public static String checkGameOver(State state){
-        return "None";
-    }
+        // removing //
+        if (!new_moves[2].equals("r0")) {
+            curr_state.board.put(new_moves[2], "");
+            curr_state.openSlots.add(new_moves[2]);
+            curr_state.stonePlaced[0]--;
+            for(List<String> mill: curr_state.playerMill){
+                curr_state.playerMill.removeIf(m -> m.contains(new_moves[2]));
+            }
+        }
 
-
-    public static String checkTerminal(State state){
-        return "";
-    }
-
-    /**
-     * checkIllegalMove check if the move by opponent is illegal
-     * @param move the move that was played
-     * @return true if the move is illegal
-     */
-    public static boolean checkIllegalMove(String move){
-        return false;
     }
 
     //____________________________________________________________________
@@ -165,6 +185,8 @@ public class Player {
             eval += checkUtil_BlockedPieces(state);
             eval += checkUtil_PiecesLeft(state) * 9;
             eval += checkUtil_PiecesConfig(state);
+            eval += checkUtil_DoubleMillsCount(state) * 8;
+            eval += checkUtil_WinGame(state) * 1050;
         }else if(state.phase == 2){
             eval += checkUtil_ClosedMills(state) * 14;
             eval += checkUtil_MillsCount(state) * 43;
@@ -182,11 +204,14 @@ public class Player {
 
     //Heuristic 1: If a mill is last closed by a player, and a stone is captured
     public static int checkUtil_ClosedMills(State state){
-        String lastTaken = state.moveSet[2];
-        if(lastTaken.equals(playerStone)){
-            return -1;
-        }else if(lastTaken.equals(oppStone)){
+        String taker = "";
+        if(!state.moveSet[2].equals("r0")){
+            taker = state.board.get(state.moveSet[1]);
+        }
+        if(taker.equals(playerStone)){
             return 1;
+        }else if(taker.equals(oppStone)){
+            return -1;
         }
         return 0;
     }
@@ -243,7 +268,6 @@ public class Player {
         HashMap<String, Integer> oppConfig = new HashMap<>();
 
         for (List<String> c: GameConstants.MILL_CONDITIONS){
-            int emptyPiece = 0;
             int playerPiece = 0;
             int oppPiece = 0;
             String emptyPieceMove = "";
@@ -254,7 +278,6 @@ public class Player {
                 }else if(piece.equals(oppStone)){
                     oppPiece++;
                 }else {
-                    emptyPiece++;
                     emptyPieceMove = move;
                 }
             }
@@ -338,17 +361,18 @@ public class Player {
         ArrayList<State> successors = new ArrayList<>();
         stoneType = (playerType == 0) ? playerStone : oppStone;
 
-        //If there is stone left in hand
-        if(state.stoneHand[playerType] > 0){
-            getSuccessors_HandtoBoard(state, playerType, successors);
-        }
-        //If there is stone left in board
-        if (state.stonePlaced[playerType] > 0){
-            getSuccessors_BoardtoBoard(state, playerType, successors);
-        }
         //If there is 3 stone left total
         if (state.stoneHand[playerType] + state.stonePlaced[playerType] <= 3){
             getSuccessors_FlyingtoBoard(state, playerType, successors);
+        } else {
+            //If there is stone left in hand
+            if(state.stoneHand[playerType] > 0){
+                getSuccessors_HandtoBoard(state, playerType, successors);
+            }
+            //If there is stone left in board
+            if (state.stonePlaced[playerType] > 0){
+                getSuccessors_BoardtoBoard(state, playerType, successors);
+            }
         }
         return successors;
     }
@@ -385,7 +409,9 @@ public class Player {
                         tempS.openSlots.remove(neighbor);
                         tempS.moveSet[0] = move;
                         tempS.moveSet[1] = neighbor;
-                        if(tempS.checkMoveMadeMill(move, stoneType)){
+                        ArrayList<List<String>> tempSMill = (stoneType.equals(playerStone)) ? tempS.playerMill : tempS.oppMill;
+                        tempSMill.removeIf(mill -> mill.contains(move));
+                        if(tempS.checkMoveMadeMill(neighbor, stoneType)){
                             getSuccessors_captureStone(tempS, playerType, successors);
                         }else {
                             successors.add(tempS);
@@ -409,7 +435,9 @@ public class Player {
                     tempS.openSlots.remove(open);
                     tempS.moveSet[0] = move;
                     tempS.moveSet[1] = open;
-                    if(tempS.checkMoveMadeMill(move, stoneType)){
+                    ArrayList<List<String>> tempSMill = (stoneType.equals(playerStone)) ? tempS.playerMill : tempS.oppMill;
+                    tempSMill.removeIf(mill -> mill.contains(move));
+                    if(tempS.checkMoveMadeMill(open, stoneType)){
                         getSuccessors_captureStone(tempS, playerType, successors);
                     }else {
                         successors.add(tempS);
@@ -421,8 +449,8 @@ public class Player {
     }
 
     public static void getSuccessors_captureStone(State state, int playerType, ArrayList<State> successors){
-        String targetStoneType = (stoneType.equals(playerStone)) ? oppStone : playerStone;
-        ArrayList<List<String>> targetMill = (stoneType.equals(playerStone)) ? state.oppMill : state.playerMill;
+        String targetStoneType = (playerType == 0) ? oppStone : playerStone;
+        ArrayList<List<String>> targetMill = (playerType == 0) ? state.oppMill : state.playerMill;
         int targetType = (playerType == 0) ? 1 : 0;
         boolean allMills = true;
 
@@ -451,17 +479,58 @@ public class Player {
                     tempS.openSlots.add(move);
                     tempS.moveSet[2] = move;
                     ArrayList<List<String>> tempSMill = (stoneType.equals(playerStone)) ? tempS.oppMill : tempS.playerMill;
-                    for(List<String> mill: tempSMill) {
-                        if(mill.contains(move)){
-                            tempSMill.remove(mill);
-                        }
-                    }
+                    tempSMill.removeIf(mill -> mill.contains(move));
                     successors.add(tempS);
                 }
             }
 
         }
 
+    }
+
+    //____________________________________________________________________
+    //                    TESTINGS RELATED CODES
+    //____________________________________________________________________
+    public static void printALLTestsInfo(){
+        printBoard();
+        int util = checkUtility(curr_state);
+        System.out.println("Eval Util: " + util);
+        System.out.println("Player Mills: " + curr_state.playerMill);
+        System.out.println("Opp Mills: " + curr_state.oppMill);
+        System.out.println("Open Slots: " + curr_state.openSlots);
+        System.out.println("Your Hand: " + curr_state.stoneHand[1]);
+        System.out.println("BOT Hand: " + curr_state.stoneHand[0]);
+        System.out.println();
+    }
+
+    public static void printBoard(){
+        System.out.println();
+        System.out.printf ("%s ---------------- %s ----------------- %s\n",getP("a7"),getP("d7"),getP("g7"));
+        System.out.println("|                  |                  |");
+        System.out.printf ("|      %s --------- %s --------- %s      |\n",getP("b6"),getP("d6"),getP("f6"));
+        System.out.println("|     |            |            |     |");
+        System.out.printf ("|     |      %s --- %s --- %s      |     |\n",getP("c5"),getP("d5"),getP("e5"));
+        System.out.println("|     |      |           |      |     |");
+        System.out.printf ("%s --- %s --- %s            %s --- %s --- %s\n",getP("a4"),getP("b4"),getP("c4"), getP("e4"),getP("f4"),getP("g4"));
+        System.out.println("|     |      |           |      |     |");
+        System.out.printf ("|     |      %s --- %s --- %s      |     |\n",getP("c3"),getP("d3"),getP("e3"));
+        System.out.println("|     |            |            |     |");
+        System.out.printf ("|      %s --------- %s --------- %s      |\n",getP("b2"),getP("d2"),getP("f2"));
+        System.out.println("|                  |                  |");
+        System.out.printf ("%s ---------------- %s ----------------- %s\n",getP("a1"),getP("d1"),getP("g1"));
+        System.out.println();
+    }
+
+    public static String getP(String key){
+        String piece = curr_state.board.get(key);
+        if(piece.equals("")){
+            piece = "?";
+        }else if(piece.equals("B")){
+            piece = "\u001B[34m" + piece + "\u001B[0m";
+        }else {
+            piece = "\u001B[38;5;208m" + piece + "\u001B[0m";
+        }
+        return piece;
     }
 
 }
