@@ -10,7 +10,12 @@ public class Player {
     public static String stoneType = "";
 
     public static int tempUtil = 0;
-    public static long timeLimit = 2_200_000_000L;
+    public static long timeLimit = 2_300_000_000L;
+    public static boolean firstRun = true;
+
+    //Shared variables for heuristic evaluations
+    public static int playerBlocked = 0;
+    public static int oppBlocked = 0;
 
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
@@ -42,6 +47,11 @@ public class Player {
                 String m1 = bestMove.moveSet[0];
                 String m2 = bestMove.moveSet[1];
                 String m3 = bestMove.moveSet[2];
+
+                if(firstRun){
+                    timeLimit = 4_900_000_000L;
+                    firstRun = false;
+                }
 
                 curr_state = bestMove;
                 //printALLTestsInfo();
@@ -87,6 +97,9 @@ public class Player {
                 bestMove = tempS;
             }
         }
+
+        //System.out.printf("At depth %d, best move is: %s %s %s\n", depth, bestMove.moveSet[0], bestMove.moveSet[1], bestMove.moveSet[2]);
+
         return bestMove;
     }
 
@@ -103,7 +116,7 @@ public class Player {
             return Integer.MIN_VALUE;
         }
         if(depth == 0){
-            return checkUtility(state);
+            return checkUtility(state, 1);
         }
         int util = Integer.MIN_VALUE;
         for (State s: getSuccessors(state, 0)){
@@ -129,7 +142,7 @@ public class Player {
             return Integer.MAX_VALUE;
         }
         if(depth == 0){
-            return checkUtility(state);
+            return checkUtility(state, 0);
         }
         int util = Integer.MAX_VALUE;
         for (State s: getSuccessors(state, 1)){
@@ -177,28 +190,28 @@ public class Player {
     //____________________________________________________________________
     //                    HEURISTICS UTILITY RELATED CODES
     //____________________________________________________________________
-    public static int checkUtility(State state){
+    public static int checkUtility(State state, int playerType){
         int eval = 0;
-        if(state.phase == 1){
-            eval += checkUtil_ClosedMills(state) * 18;
-            eval += checkUtil_MillsCount(state) * 26;
-            eval += checkUtil_BlockedPieces(state);
-            eval += checkUtil_PiecesLeft(state) * 9;
-            eval += checkUtil_PiecesConfig(state);
-            eval += checkUtil_DoubleMillsCount(state) * 8;
-            eval += checkUtil_WinGame(state) * 1050;
-        }else if(state.phase == 2){
-            eval += checkUtil_ClosedMills(state) * 14;
-            eval += checkUtil_MillsCount(state) * 43;
-            eval += checkUtil_BlockedPieces(state) * 10;
-            eval += checkUtil_PiecesLeft(state) * 11;
-            eval += checkUtil_DoubleMillsCount(state) * 8;
-            eval += checkUtil_WinGame(state) * 1086;
-        }else {
+        int blocked = checkUtil_BlockedPieces(state) * (11 - state.stoneHand[playerType]); //blocked is initializing the data for WnGame
+        if(state.stoneHand[playerType] + state.stonePlaced[playerType] <= 3){
             eval += checkUtil_ClosedMills(state) * 16;
-            eval += checkUtil_PiecesConfig(state);
-            eval += checkUtil_WinGame(state) * 1190;
+            eval += checkUtil_PiecesConfig(state, playerType);
+        }else{
+            eval += blocked;
+            if(state.stoneHand[0] > 0 || state.stoneHand[1] > 0){
+                eval += checkUtil_ClosedMills(state) * 18;
+                eval += checkUtil_MillsCount(state) * 26;
+                eval += checkUtil_PiecesLeft(state) * 9;
+                eval += checkUtil_PiecesConfig(state, playerType);
+            }else {
+                eval += checkUtil_ClosedMills(state) * 14;
+                eval += checkUtil_MillsCount(state) * 43;
+                eval += checkUtil_PiecesLeft(state) * 11;
+                eval += checkUtil_DoubleMillsCount(state) * 8;
+                eval += checkUtil_PiecesConfig(state, playerType);
+            }
         }
+        eval += checkUtil_WinGame(state) * 1200;
         return eval;
     }
 
@@ -225,8 +238,8 @@ public class Player {
 
     //Heuristic 3: The difference in blocked pieces
     public static int checkUtil_BlockedPieces(State state){
-        int playerBlocked = 0;
-        int oppBlocked = 0;
+        playerBlocked = 0;
+        oppBlocked = 0;
         for(String move: GameConstants.ADJACENT_MOVES.keySet()){
             if(!state.board.get(move).equals("")){
                 String[] moveSet = GameConstants.ADJACENT_MOVES.get(move);
@@ -257,7 +270,7 @@ public class Player {
     }
 
     //Heuristic 5-6: Difference in two and three-piece config where 1 more piece is needed to form a mill
-    public static int checkUtil_PiecesConfig(State state){
+    public static int checkUtil_PiecesConfig(State state, int playerType){
         int playerTwoPieceConfig = 0;
         int oppTwoPieceConfig = 0;
 
@@ -306,7 +319,7 @@ public class Player {
         }
 
         int twoMultiplier = 10;
-        int threeMultipler = (state.phase == 1) ? 7 : 1;
+        int threeMultipler = (state.stoneHand[playerType] + state.stonePlaced[playerType] > 3) ? 7 : 1;
         int twoPieceEval = (playerTwoPieceConfig - oppTwoPieceConfig) * twoMultiplier;
         int threePieceEval = (playerThreePieceConfig - oppThreePieceConfig) * threeMultipler;
         return twoPieceEval + threePieceEval;
@@ -350,6 +363,12 @@ public class Player {
         }else if(oppStoneLeft < 3){
             return 1;
         }
+
+        if(state.stoneHand[0] == 0 && playerBlocked == state.stonePlaced[0]){
+            return -1;
+        }else if(state.stoneHand[1] == 0 && oppBlocked == state.stonePlaced[1]){
+            return 1;
+        }
         return 0;
     }
 
@@ -380,7 +399,6 @@ public class Player {
     public static void getSuccessors_HandtoBoard(State state, int playerType, ArrayList<State> successors){
         for(String move: state.openSlots){
             State tempS = new State(state);
-            tempS.phase = 1;
             tempS.board.put(move, stoneType);
             tempS.stoneHand[playerType]--;
             tempS.stonePlaced[playerType]++;
@@ -402,7 +420,6 @@ public class Player {
                 for(String neighbor: GameConstants.ADJACENT_MOVES.get(move)){
                     if(state.board.get(neighbor).equals("")){
                         State tempS = new State(state);
-                        tempS.phase = 2;
                         tempS.board.put(move, "");
                         tempS.board.put(neighbor, stoneType);
                         tempS.openSlots.add(move);
@@ -428,7 +445,6 @@ public class Player {
             if(state.board.get(move).equals(stoneType)){
                 for(String open: state.openSlots){
                     State tempS = new State(state);
-                    tempS.phase = 3;
                     tempS.board.put(move, "");
                     tempS.board.put(open, stoneType);
                     tempS.openSlots.add(move);
@@ -493,7 +509,7 @@ public class Player {
     //____________________________________________________________________
     public static void printALLTestsInfo(){
         printBoard();
-        int util = checkUtility(curr_state);
+        int util = checkUtility(curr_state, 0);
         System.out.println("Eval Util: " + util);
         System.out.println("Player Mills: " + curr_state.playerMill);
         System.out.println("Opp Mills: " + curr_state.oppMill);
