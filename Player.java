@@ -1,5 +1,4 @@
 import java.util.*;
-import java.util.concurrent.AbstractExecutorService;
 
 public class Player {
     public static State curr_state = new State();
@@ -9,13 +8,8 @@ public class Player {
     public static String oppHand = "";
     public static String stoneType = "";
 
-    public static int tempUtil = 0;
-    public static long timeLimit = 2_300_000_000L;
+    public static long timeLimit = 2_000_000_000L;
     public static boolean firstRun = true;
-
-    //Shared variables for heuristic evaluations
-    public static int playerBlocked = 0;
-    public static int oppBlocked = 0;
 
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
@@ -31,6 +25,7 @@ public class Player {
                     oppHand = "h1";
                     playerStone = "O";
                     playerHand = "h2";
+                    //timeLimit = 3_950_000_000L;
                     continue;
                 }
                 playerStone = "B";
@@ -48,6 +43,7 @@ public class Player {
                 String m2 = bestMove.moveSet[1];
                 String m3 = bestMove.moveSet[2];
 
+                //Increase time limit after the first run
                 if(firstRun){
                     timeLimit = 4_900_000_000L;
                     firstRun = false;
@@ -64,6 +60,10 @@ public class Player {
         }
     }
 
+    /**
+     * Iteratively deepen the Minimax Decision
+     * @return the best move given a time limit
+     */
     public static State IterativeDeepening() {
         long startTime = System.nanoTime();
         int depth = 1;
@@ -76,13 +76,15 @@ public class Player {
             }
             depth++;
         }
+        //System.out.println("Time to get best move: " + (System.nanoTime() - startTime)/1_000_000L);
         return bestMove;
     }
 
     /**
-     * MinimaxDecision is the minimax algorithm with pruning
-     * This function decides the next best move
-     * @return the String of the next best move
+     * Decides the best move heuristically given a depth and time limit
+     * @param startTime: the time the turn has started
+     * @param depth: the max depth for this iteration
+     * @return the best move given a time limit and depth
      */
     public static State MinimaxDecision(long startTime, int depth){
         int bestUtil = Integer.MIN_VALUE;
@@ -97,8 +99,11 @@ public class Player {
                 bestMove = tempS;
             }
         }
-
-        //System.out.printf("At depth %d, best move is: %s %s %s\n", depth, bestMove.moveSet[0], bestMove.moveSet[1], bestMove.moveSet[2]);
+//        if(bestMove != null){
+//            System.out.printf("At depth %d, best move is: %s %s %s (util %d)\n", depth, bestMove.moveSet[0], bestMove.moveSet[1], bestMove.moveSet[2], bestUtil);
+//        }else{
+//            System.out.printf("At depth %d, best move exit early and is null (util %d)\n", depth, bestUtil);
+//        }
 
         return bestMove;
     }
@@ -109,13 +114,12 @@ public class Player {
      * @param a alpha value
      * @param b beta value
      * @param depth the current depth of the state (for utility check)
+     * @param startTime the time the search started
      * @return the maximized utility value of this state
      */
     public static int MaxValue(State state, int a, int b, int depth, long startTime){
-        if (System.nanoTime() - startTime >= timeLimit) {
-            return Integer.MIN_VALUE;
-        }
-        if(depth == 0){
+        int terminal = Math.abs(checkUtil_WinGame(state));
+        if(depth == 0 || terminal != 0 || System.nanoTime() - startTime >= timeLimit){
             return checkUtility(state, 1);
         }
         int util = Integer.MIN_VALUE;
@@ -135,13 +139,12 @@ public class Player {
      * @param a alpha value
      * @param b beta value
      * @param depth the current depth of the state (for utility check)
+     * @param startTime the time the search started
      * @return the minimized utility value of this state
      */
     public static int MinValue(State state, int a, int b, int depth, long startTime){
-        if (System.nanoTime() - startTime >= timeLimit) {
-            return Integer.MAX_VALUE;
-        }
-        if(depth == 0){
+        int terminal = Math.abs(checkUtil_WinGame(state));
+        if(depth == 0 || terminal != 0 || System.nanoTime() - startTime >= timeLimit){
             return checkUtility(state, 0);
         }
         int util = Integer.MAX_VALUE;
@@ -155,8 +158,127 @@ public class Player {
         return util;
     }
 
+    /**
+     * Check for illegal moves made by a player
+     * @param move: the move to be checked
+     * @param player: the player making the move
+     * @return true if the move is legal, else false
+     */
+    public static boolean checkLegalMove(String move, int player) {
+        long startTime = System.nanoTime();
+        boolean answer = true;
+
+        String A = move.substring(0,2);
+        String B = move.substring(3,5);
+        String C = move.substring(6,8);
+
+        String tempStoneType = "";
+
+        //Get the correct stone type for the check
+        if(player == 1) {
+            tempStoneType = oppStone;
+        } else {
+            tempStoneType = playerStone;
+        }
+
+        //Check that the string is in the correct format
+        if(!GameConstants.ADJACENT_MOVES.containsKey(A) && !A.equalsIgnoreCase("h1") && !A.equalsIgnoreCase("h2")) {
+            //Uncomment in the case printing should occur:
+            //System.out.println("Incorrect move format, part A is incorrect")
+            answer = false;
+        } else if (!GameConstants.ADJACENT_MOVES.containsKey(B)) {
+            //Uncomment in the case printing should occur:
+            //System.out.println("Incorrect move format, part B is incorrect")
+            answer = false;
+        } else if (!GameConstants.ADJACENT_MOVES.containsKey(C) && !C.equalsIgnoreCase("r0")) {
+            //Uncomment in the case printing should occur:
+            //System.out.println("Incorrect move format, part C is incorrect")
+            answer = false;
+        }
+
+        //Checks if a player attempts to move a piece that isn't theirs
+        if((curr_state.board.get(A).equals(oppStone) && player == 0) || (curr_state.board.get(A).equals(playerStone) && player == 1)) {
+            //Uncomment in the case printing should occur:
+            //System.out.println("Illegal Move Made, attempt to move a stone that isn't owned by the player")
+            answer = false;
+        }
+
+        //Checks if a player attempts to place a piece out of the opponent's hand
+        String correctHand = (player == 1) ? oppHand : playerHand;
+        if(A.equals(correctHand)) {
+            //Uncomment in the case printing should occur:
+            //System.out.println("Illegal Move Made, attempt to place a stone out of the other player's hand")
+            answer = false;
+        }
+
+        //Checks if a piece is attempted to be placed without having any in hand to place
+        if(curr_state.stoneHand[player] == 0 && A.contains("h")) {
+            //Uncomment in the case printing should occur:
+            //System.out.println("Illegal Move Made, attempt to place a stone with out having one in hand")
+            answer = false;
+        }
+
+        //Check that when placing a piece there is not already one in that position
+        if(!curr_state.openSlots.contains(B)) {
+            //Uncomment in the case printing should occur:
+            //System.out.println("Illegal Move Made, attempt to place a stone on a non-empty position")
+            answer = false;
+        }
+
+        //Check if a piece is attempted to be removed where a piece does not exist
+        if(curr_state.openSlots.contains(C)) {
+            //Uncomment in the case printing should occur:
+            //System.out.println("Illegal Move Made, attempt to remove a piece where one does not exist")
+            answer = false;
+        }
+
+        boolean millFormed = curr_state.checkMoveMadeMillNoUpdate(move, tempStoneType);
+        //Check if a piece isn't removed when there is a mill made
+        if(millFormed && C.equalsIgnoreCase("r0")) {
+            //Uncomment in the case printing should occur:
+            //System.out.println("Illegal Move Made, didn't remove piece when mill was made")
+            answer = false;
+        }
+
+        //Check if a piece is removed when there isn't a mill made
+        if(!millFormed && !C.equalsIgnoreCase("r0")) {
+            //Uncomment in the case printing should occur:
+            //System.out.println("Illegal Move Made, tried removing a piece when a mill wasn't made")
+            answer = false;
+        }
+
+        //Check that if the player is in phase 2 that they do not "fly"
+        if((curr_state.stoneHand[player] + curr_state.stonePlaced[player]) > 3) {
+            boolean isValid = false;
+            //Check that B is a possible adjacent move of B
+            for(String possibleMove : GameConstants.ADJACENT_MOVES.get(A)) {
+                if(possibleMove.equalsIgnoreCase(B)) {
+                    isValid = true;
+                }
+            }
+
+            if(!isValid) {
+                //Uncomment in the case printing should occur:
+                //System.out.println("Illegal Move Made, moved not to an adjacent location")
+                answer = false;
+            }
+        }
+        System.out.println("Time to validate opp's move: " + (System.nanoTime() - startTime)/1_000_000L);
+        return answer;
+    }
+
+    /**
+     * Process the move returned by the ref and update the state
+     * @param move the move that was made by the opponent
+     */
     public static void process_opponent_move(String move) {
         String[] new_moves = move.split(" ");
+
+        //Check the move is legal
+//        boolean isLegal = checkLegalMove(move, 1);
+//        if(!isLegal) {
+//            System.out.println("Invalid Move Made, Game is Invalid from this point on");
+//        }
 
         if (new_moves[0].startsWith("h")) {
             // placing //
@@ -190,25 +312,31 @@ public class Player {
     //____________________________________________________________________
     //                    HEURISTICS UTILITY RELATED CODES
     //____________________________________________________________________
+
+    /**
+     * Evaluate the Utility for a state, this utility function also account for terminal states
+     * @param state the state to be evaluated
+     * @param playerType the type of player that last move on the board (to be assessed for)
+     * @return the heuristic utility value for a board
+     */
     public static int checkUtility(State state, int playerType){
         int eval = 0;
-        int blocked = checkUtil_BlockedPieces(state) * (11 - state.stoneHand[playerType]); //blocked is initializing the data for WnGame
         if(state.stoneHand[playerType] + state.stonePlaced[playerType] <= 3){
             eval += checkUtil_ClosedMills(state) * 16;
             eval += checkUtil_PiecesConfig(state, playerType);
         }else{
-            eval += blocked;
-            if(state.stoneHand[0] > 0 || state.stoneHand[1] > 0){
+            if(state.stoneHand[playerType] > 0){
                 eval += checkUtil_ClosedMills(state) * 18;
                 eval += checkUtil_MillsCount(state) * 26;
                 eval += checkUtil_PiecesLeft(state) * 9;
+                eval += checkUtil_BlockedPieces(state);
                 eval += checkUtil_PiecesConfig(state, playerType);
             }else {
                 eval += checkUtil_ClosedMills(state) * 14;
                 eval += checkUtil_MillsCount(state) * 43;
                 eval += checkUtil_PiecesLeft(state) * 11;
+                eval += checkUtil_BlockedPieces(state) * 10;
                 eval += checkUtil_DoubleMillsCount(state) * 8;
-                eval += checkUtil_PiecesConfig(state, playerType);
             }
         }
         eval += checkUtil_WinGame(state) * 1200;
@@ -238,10 +366,11 @@ public class Player {
 
     //Heuristic 3: The difference in blocked pieces
     public static int checkUtil_BlockedPieces(State state){
-        playerBlocked = 0;
-        oppBlocked = 0;
+        int playerBlocked = 0;
+        int oppBlocked = 0;
         for(String move: GameConstants.ADJACENT_MOVES.keySet()){
-            if(!state.board.get(move).equals("")){
+            String curr_stone = state.board.get(move);
+            if(!curr_stone.equals("")){
                 String[] moveSet = GameConstants.ADJACENT_MOVES.get(move);
                 boolean blocked = true;
                 for(String neighbor: moveSet){
@@ -251,9 +380,9 @@ public class Player {
                     }
                 }
                 if(blocked){
-                    if(move.equals(playerStone)){
+                    if(curr_stone.equals(playerStone)){
                         playerBlocked++;
-                    }else if(move.equals(oppStone)){
+                    }else if(curr_stone.equals(oppStone)){
                         oppBlocked++;
                     }
                 }
@@ -364,9 +493,32 @@ public class Player {
             return 1;
         }
 
-        if(state.stoneHand[0] == 0 && playerBlocked == state.stonePlaced[0]){
+        int playerBlocked = 0;
+        int oppBlocked = 0;
+        for(String move: GameConstants.ADJACENT_MOVES.keySet()){
+            String curr_stone = state.board.get(move);
+            if(!curr_stone.equals("")){
+                String[] moveSet = GameConstants.ADJACENT_MOVES.get(move);
+                boolean blocked = true;
+                for(String neighbor: moveSet){
+                    if (state.board.get(neighbor).equals("")){
+                        blocked = false;
+                        break;
+                    }
+                }
+                if(blocked){
+                    if(curr_stone.equals(playerStone)){
+                        playerBlocked++;
+                    }else if(curr_stone.equals(oppStone)){
+                        oppBlocked++;
+                    }
+                }
+            }
+        }
+
+        if(state.stoneHand[0] == 0 && playerBlocked == state.stonePlaced[0] && playerStoneLeft > 3){
             return -1;
-        }else if(state.stoneHand[1] == 0 && oppBlocked == state.stonePlaced[1]){
+        }else if(state.stoneHand[1] == 0 && oppBlocked == state.stonePlaced[1]  && oppStoneLeft > 3){
             return 1;
         }
         return 0;
@@ -376,6 +528,12 @@ public class Player {
     //                    SUCCESSORS RELATED CODES
     //____________________________________________________________________
 
+    /**
+     * Get all successors of a state
+     * @param state the parent state
+     * @param playerType the player that is making the next move
+     * @return List of successor states
+     */
     public static ArrayList<State> getSuccessors(State state, int playerType){
         ArrayList<State> successors = new ArrayList<>();
         stoneType = (playerType == 0) ? playerStone : oppStone;
@@ -396,6 +554,12 @@ public class Player {
         return successors;
     }
 
+    /**
+     * Get all successor states that can be made from moving stone from hand to board
+     * @param state the parent state
+     * @param playerType the player that is making the next move
+     * @param successors the list of successors to be added to
+     */
     public static void getSuccessors_HandtoBoard(State state, int playerType, ArrayList<State> successors){
         for(String move: state.openSlots){
             State tempS = new State(state);
@@ -414,6 +578,12 @@ public class Player {
         }
     }
 
+    /**
+     * Get all successor states that can be made from moving stone from board to board
+     * @param state the parent state
+     * @param playerType the player that is making the next move
+     * @param successors the list of successors to be added to
+     */
     public static void getSuccessors_BoardtoBoard(State state, int playerType, ArrayList<State> successors){
         for(String move: state.board.keySet()) {
             if(state.board.get(move).equals(stoneType)){
@@ -440,6 +610,12 @@ public class Player {
         }
     }
 
+    /**
+     * Get all successor states that can be made from moving stone from flying
+     * @param state the parent state
+     * @param playerType the player that is making the next move
+     * @param successors the list of successors to be added to
+     */
     public static void getSuccessors_FlyingtoBoard(State state, int playerType, ArrayList<State> successors){
         for(String move: state.board.keySet()) {
             if(state.board.get(move).equals(stoneType)){
@@ -464,12 +640,19 @@ public class Player {
         }
     }
 
+    /**
+     * Get all successor states that can be made after moving stone, and can capture an opponent's stone
+     * @param state the parent state
+     * @param playerType the player that is making the next move
+     * @param successors the list of successors to be added to
+     */
     public static void getSuccessors_captureStone(State state, int playerType, ArrayList<State> successors){
         String targetStoneType = (playerType == 0) ? oppStone : playerStone;
         ArrayList<List<String>> targetMill = (playerType == 0) ? state.oppMill : state.playerMill;
         int targetType = (playerType == 0) ? 1 : 0;
         boolean allMills = true;
 
+        //Get stones that are not part of mills
         for(String move: state.board.keySet()) {
             if(state.board.get(move).equals(targetStoneType) ){
                 for(List<String> mill: targetMill){
@@ -486,6 +669,7 @@ public class Player {
             }
         }
 
+        //If cannot get stones that are not part of mills, then get stones that are part of mills
         if(allMills){
             for(String move: state.board.keySet()) {
                 if(state.board.get(move).equals(targetStoneType) ){
