@@ -55,7 +55,15 @@ public class Player {
                 //Report the move to the referee
                 System.out.printf("%s %s %s\n", m1,m2,m3);
                 System.out.flush();
+            }
 
+            if(!firstRun){
+                int winner = checkUtil_WinGame(curr_state);
+                if (winner != 0){
+                    String winner_stoneType = (winner == 1) ? playerStone : oppStone;
+                    System.out.println(winner_stoneType + " wins!");
+                    System.out.flush();
+                }
             }
         }
     }
@@ -158,119 +166,118 @@ public class Player {
         return util;
     }
 
-    /**
-     * Check for illegal moves made by a player
-     * @param move: the move to be checked
-     * @param player: the player making the move
-     * @return true if the move is legal, else false
-     */
-    
-    public static boolean checkLegalMove(String move, int player) {
-        long startTime = System.nanoTime();
-        boolean answer = true;
-
-        String A = move.substring(0,2);
-        String B = move.substring(3,5);
-        String C = move.substring(6,8);
-
-        //System.out.println(curr_state.board.get(A));
-
-        String tempStoneType = "";
-
-        //Get the correct stone type for the check
-        if(player == 1) {
-            tempStoneType = oppStone;
-        } else {
-            tempStoneType = playerStone;
-        }
-
-        //Check that the string is in the correct format
-        if(!GameConstants.ADJACENT_MOVES.containsKey(A) && !A.equalsIgnoreCase("h1") && !A.equalsIgnoreCase("h2")) {
-            //Uncomment in the case printing should occur:
-            System.out.println("Incorrect move format, part A is incorrect");
-            answer = false;
-        } else if (!GameConstants.ADJACENT_MOVES.containsKey(B)) {
-            //Uncomment in the case printing should occur:
-            System.out.println("Incorrect move format, part B is incorrect");
-            answer = false;
-        } else if (!GameConstants.ADJACENT_MOVES.containsKey(C) && !C.equalsIgnoreCase("r0")) {
-            //Uncomment in the case printing should occur:
-            //System.out.println("Incorrect move format, part C is incorrect")
-            answer = false;
-        }
-
-        //Checks if a player attempts to place a piece out of the opponent's hand
-        String correctHand = (player == 1) ? oppHand : playerHand;
-        if((A.equalsIgnoreCase("h1") && playerHand == "h1" && player == 1) || (A.equalsIgnoreCase("h2") && playerHand == "h2" && player == 1) || (A.equalsIgnoreCase("h1") && oppHand == "h1" && player == 0) || (A.equalsIgnoreCase("h2") && oppHand == "h2" && player == 0)) {
-            //Uncomment in the case printing should occur:
-            System.out.println("Illegal Move Made, attempt to place a stone out of the other player's hand");
-            answer = false;
-        }
-
-        //Checks if a piece is attempted to be placed without having any in hand to place
-        if(curr_state.stoneHand[player] == 0 && A.contains("h")) {
-            //Uncomment in the case printing should occur:
-            System.out.println("Illegal Move Made, attempt to place a stone with out having one in hand");
-            answer = false;
-        }
-
-        //Check that when placing a piece there is not already one in that position
-        if(!curr_state.openSlots.contains(B)) {
-            //Uncomment in the case printing should occur:
-            System.out.println("Illegal Move Made, attempt to place a stone on a non-empty position");
-            answer = false;
-        }
-
-        //Check if a piece is attempted to be removed where a piece does not exist
-        if(curr_state.openSlots.contains(C)) {
-            //Uncomment in the case printing should occur:
-            System.out.println("Illegal Move Made, attempt to remove a piece where one does not exist");
-            answer = false;
-        }
-
-        boolean millFormed = curr_state.checkMoveMadeMillNoUpdate(move, tempStoneType);
-        //Check if a piece isn't removed when there is a mill made
-        if(millFormed && C.equalsIgnoreCase("r0")) {
-            //Uncomment in the case printing should occur:
-            System.out.println("Illegal Move Made, didn't remove piece when mill was made");
-            answer = false;
-        }
-
-        //Check if a piece is removed when there isn't a mill made
-        if(!millFormed && !C.equalsIgnoreCase("r0")) {
-            //Uncomment in the case printing should occur:
-            System.out.println("Illegal Move Made, tried removing a piece when a mill wasn't made");
-            answer = false;
-        }
-
-        if(!A.contains("h")) {
-            //Checks if a player attempts to move a piece that isn't theirs
-            if((curr_state.board.get(A).equalsIgnoreCase(oppStone) && player == 0) || (curr_state.board.get(A).equalsIgnoreCase(playerStone) && player == 1)) {
-                //Uncomment in the case printing should occur:
-                System.out.println("Illegal Move Made, attempt to move a stone that isn't owned by the player");
-                answer = false;
-            }
-        }
-
-        //Check that if the player is in phase 2 that they do not "fly"
-        if(curr_state.stoneHand[player] == 0 && curr_state.stonePlaced[player] > 3) {
-            boolean isValid = false;
-            //Check that B is a possible adjacent move of B
-            for(String possibleMove : GameConstants.ADJACENT_MOVES.get(A)) {
-                if(possibleMove.equalsIgnoreCase(B)) {
-                    isValid = true;
-                }
-            }
-
-            if(!isValid) {
-                //Uncomment in the case printing should occur:
-                System.out.println("Illegal Move Made, moved not to an adjacent location");
-                answer = false;
-            }
-        }
-        System.out.println("Time to validate opp's move: " + (System.nanoTime() - startTime)/1_000_000L);
-        return answer;
-    }
+//    /**
+//     * Check for illegal moves made by a player
+//     * @param move: the move to be checked
+//     * @param player: the player making the move
+//     * @return true if the move is legal, else false
+//     */
+//    public static boolean checkLegalMove(String move, int player) {
+//        long startTime = System.nanoTime();
+//        boolean answer = true;
+//
+//        String A = move.substring(0,2);
+//        String B = move.substring(3,5);
+//        String C = move.substring(6,8);
+//
+//        //System.out.println(curr_state.board.get(A));
+//
+//        String tempStoneType = "";
+//
+//        //Get the correct stone type for the check
+//        if(player == 1) {
+//            tempStoneType = oppStone;
+//        } else {
+//            tempStoneType = playerStone;
+//        }
+//
+//        //Check that the string is in the correct format
+//        if(!GameConstants.ADJACENT_MOVES.containsKey(A) && !A.equalsIgnoreCase("h1") && !A.equalsIgnoreCase("h2")) {
+//            //Uncomment in the case printing should occur:
+//            System.out.println("Incorrect move format, part A is incorrect");
+//            answer = false;
+//        } else if (!GameConstants.ADJACENT_MOVES.containsKey(B)) {
+//            //Uncomment in the case printing should occur:
+//            System.out.println("Incorrect move format, part B is incorrect");
+//            answer = false;
+//        } else if (!GameConstants.ADJACENT_MOVES.containsKey(C) && !C.equalsIgnoreCase("r0")) {
+//            //Uncomment in the case printing should occur:
+//            //System.out.println("Incorrect move format, part C is incorrect")
+//            answer = false;
+//        }
+//
+//        //Checks if a player attempts to place a piece out of the opponent's hand
+//        String correctHand = (player == 1) ? oppHand : playerHand;
+//        if((A.equalsIgnoreCase("h1") && playerHand == "h1" && player == 1) || (A.equalsIgnoreCase("h2") && playerHand == "h2" && player == 1) || (A.equalsIgnoreCase("h1") && oppHand == "h1" && player == 0) || (A.equalsIgnoreCase("h2") && oppHand == "h2" && player == 0)) {
+//            //Uncomment in the case printing should occur:
+//            System.out.println("Illegal Move Made, attempt to place a stone out of the other player's hand");
+//            answer = false;
+//        }
+//
+//        //Checks if a piece is attempted to be placed without having any in hand to place
+//        if(curr_state.stoneHand[player] == 0 && A.contains("h")) {
+//            //Uncomment in the case printing should occur:
+//            System.out.println("Illegal Move Made, attempt to place a stone with out having one in hand");
+//            answer = false;
+//        }
+//
+//        //Check that when placing a piece there is not already one in that position
+//        if(!curr_state.openSlots.contains(B)) {
+//            //Uncomment in the case printing should occur:
+//            System.out.println("Illegal Move Made, attempt to place a stone on a non-empty position");
+//            answer = false;
+//        }
+//
+//        //Check if a piece is attempted to be removed where a piece does not exist
+//        if(curr_state.openSlots.contains(C)) {
+//            //Uncomment in the case printing should occur:
+//            System.out.println("Illegal Move Made, attempt to remove a piece where one does not exist");
+//            answer = false;
+//        }
+//
+//        boolean millFormed = curr_state.checkMoveMadeMillNoUpdate(move, tempStoneType);
+//        //Check if a piece isn't removed when there is a mill made
+//        if(millFormed && C.equalsIgnoreCase("r0")) {
+//            //Uncomment in the case printing should occur:
+//            System.out.println("Illegal Move Made, didn't remove piece when mill was made");
+//            answer = false;
+//        }
+//
+//        //Check if a piece is removed when there isn't a mill made
+//        if(!millFormed && !C.equalsIgnoreCase("r0")) {
+//            //Uncomment in the case printing should occur:
+//            System.out.println("Illegal Move Made, tried removing a piece when a mill wasn't made");
+//            answer = false;
+//        }
+//
+//        if(!A.contains("h")) {
+//            //Checks if a player attempts to move a piece that isn't theirs
+//            if((curr_state.board.get(A).equalsIgnoreCase(oppStone) && player == 0) || (curr_state.board.get(A).equalsIgnoreCase(playerStone) && player == 1)) {
+//                //Uncomment in the case printing should occur:
+//                System.out.println("Illegal Move Made, attempt to move a stone that isn't owned by the player");
+//                answer = false;
+//            }
+//        }
+//
+//        //Check that if the player is in phase 2 that they do not "fly"
+//        if(curr_state.stoneHand[player] == 0 && curr_state.stonePlaced[player] > 3) {
+//            boolean isValid = false;
+//            //Check that B is a possible adjacent move of B
+//            for(String possibleMove : GameConstants.ADJACENT_MOVES.get(A)) {
+//                if(possibleMove.equalsIgnoreCase(B)) {
+//                    isValid = true;
+//                }
+//            }
+//
+//            if(!isValid) {
+//                //Uncomment in the case printing should occur:
+//                System.out.println("Illegal Move Made, moved not to an adjacent location");
+//                answer = false;
+//            }
+//        }
+//        System.out.println("Time to validate opp's move: " + (System.nanoTime() - startTime)/1_000_000L);
+//        return answer;
+//    }
 
     /**
      * Process the move returned by the ref and update the state
@@ -328,25 +335,35 @@ public class Player {
      */
     public static int checkUtility(State state, int playerType){
         int eval = 0;
+        eval += checkUtil_WinGame(state) * 5000;
+
+        if (eval == -5000 || eval == 5000 ) {
+            return eval;
+        }
+
         if(state.stoneHand[playerType] + state.stonePlaced[playerType] <= 3){
             eval += checkUtil_ClosedMills(state) * 16;
             eval += checkUtil_PiecesConfig(state, playerType);
         }else{
             if(state.stoneHand[playerType] > 0){
-                eval += checkUtil_ClosedMills(state) * 18;
-                eval += checkUtil_MillsCount(state) * 26;
+                eval += checkUtil_ClosedMills(state) * 40;
+                eval += checkUtil_MillsCount(state) * 20;
                 eval += checkUtil_PiecesLeft(state) * 9;
-                eval += checkUtil_BlockedPieces(state);
+                eval += checkUtil_BlockedPieces(state) * 3;
                 eval += checkUtil_PiecesConfig(state, playerType);
             }else {
-                eval += checkUtil_ClosedMills(state) * 14;
-                eval += checkUtil_MillsCount(state) * 43;
+                eval += checkUtil_ClosedMills(state) * 40;
+                eval += checkUtil_MillsCount(state) * 30;
                 eval += checkUtil_PiecesLeft(state) * 11;
                 eval += checkUtil_BlockedPieces(state) * 10;
-                eval += checkUtil_DoubleMillsCount(state) * 8;
+                eval += checkUtil_DoubleMillsCount(state) * 6;
             }
         }
-        eval += checkUtil_WinGame(state) * 1200;
+
+        if (eval > 5000 || eval == -5000) {
+            throw(new RuntimeException("Invalid Utility!"));
+        }
+
         return eval;
     }
 
