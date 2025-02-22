@@ -1,12 +1,15 @@
-import java.util.*;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.List;
+import java.util.Properties;
+import java.util.Scanner;
 import java.util.concurrent.CompletableFuture;
+
+import org.apache.http.HttpException;
 
 //Google API Imports
 import com.google.genai.Client;
 import com.google.genai.types.GenerateContentResponse;
-import org.apache.http.HttpException;
 
 public class PlayerGemini {
     public static State curr_state = new State();
