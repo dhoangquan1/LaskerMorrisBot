@@ -1,9 +1,11 @@
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Scanner;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 import org.apache.http.HttpException;
 
@@ -18,7 +20,7 @@ public class PlayerGemini {
     public static String playerHand = "";
     public static String oppHand = "";
 
-    public static long timeLimit = 2_000_000_000L;
+    public static long timeLimit = 60_000_000_000L;
     public static boolean firstRun = true;
 
     public static void main(String[] args) throws IOException, HttpException{
@@ -51,13 +53,13 @@ public class PlayerGemini {
 
             //Game playing with minimax
             if(!input.startsWith("END")) {
-                String bestMove = getGeminiMoves(client);
-                //System.out.printf(bestMove);
+                String bestMove = getGeminiMoves(client, "");
+                System.out.printf(bestMove);
                 String[] m = bestMove.split(" ");
 
                 //Increase time limit after the first run
                 if(firstRun){
-                    timeLimit = 4_900_000_000L;
+                    timeLimit = 60_000_000_000L;
                     firstRun = false;
                 }
 
@@ -66,8 +68,6 @@ public class PlayerGemini {
 
                 //Report the move to the referee
                 System.out.printf("%s %s %s\n", m[0], m[1], m[2]);
-                printBoard();
-                System.out.printf(bestMove);
                 System.out.flush();
             }
 
@@ -86,118 +86,118 @@ public class PlayerGemini {
     //                    MOVE AND STATE PROCESSING RELATED CODES
     //____________________________________________________________________
 
-//    /**
-//     * Check for illegal moves made by a player
-//     * @param move: the move to be checked
-//     * @param player: the player making the move
-//     * @return true if the move is legal, else false
-//     */
-//    public static boolean checkLegalMove(String move, int player) {
-//        long startTime = System.nanoTime();
-//        boolean answer = true;
-//
-//        String A = move.substring(0,2);
-//        String B = move.substring(3,5);
-//        String C = move.substring(6,8);
-//
-//        //System.out.println(curr_state.board.get(A));
-//
-//        String tempStoneType = "";
-//
-//        //Get the correct stone type for the check
-//        if(player == 1) {
-//            tempStoneType = oppStone;
-//        } else {
-//            tempStoneType = playerStone;
-//        }
-//
-//        //Check that the string is in the correct format
-//        if(!GameConstants.ADJACENT_MOVES.containsKey(A) && !A.equalsIgnoreCase("h1") && !A.equalsIgnoreCase("h2")) {
-//            //Uncomment in the case printing should occur:
-//            System.out.println("Incorrect move format, part A is incorrect");
-//            answer = false;
-//        } else if (!GameConstants.ADJACENT_MOVES.containsKey(B)) {
-//            //Uncomment in the case printing should occur:
-//            System.out.println("Incorrect move format, part B is incorrect");
-//            answer = false;
-//        } else if (!GameConstants.ADJACENT_MOVES.containsKey(C) && !C.equalsIgnoreCase("r0")) {
-//            //Uncomment in the case printing should occur:
-//            //System.out.println("Incorrect move format, part C is incorrect")
-//            answer = false;
-//        }
-//
-//        //Checks if a player attempts to place a piece out of the opponent's hand
-//        String correctHand = (player == 1) ? oppHand : playerHand;
-//        if((A.equalsIgnoreCase("h1") && playerHand == "h1" && player == 1) || (A.equalsIgnoreCase("h2") && playerHand == "h2" && player == 1) || (A.equalsIgnoreCase("h1") && oppHand == "h1" && player == 0) || (A.equalsIgnoreCase("h2") && oppHand == "h2" && player == 0)) {
-//            //Uncomment in the case printing should occur:
-//            System.out.println("Illegal Move Made, attempt to place a stone out of the other player's hand");
-//            answer = false;
-//        }
-//
-//        //Checks if a piece is attempted to be placed without having any in hand to place
-//        if(curr_state.stoneHand[player] == 0 && A.contains("h")) {
-//            //Uncomment in the case printing should occur:
-//            System.out.println("Illegal Move Made, attempt to place a stone with out having one in hand");
-//            answer = false;
-//        }
-//
-//        //Check that when placing a piece there is not already one in that position
-//        if(!curr_state.openSlots.contains(B)) {
-//            //Uncomment in the case printing should occur:
-//            System.out.println("Illegal Move Made, attempt to place a stone on a non-empty position");
-//            answer = false;
-//        }
-//
-//        //Check if a piece is attempted to be removed where a piece does not exist
-//        if(curr_state.openSlots.contains(C)) {
-//            //Uncomment in the case printing should occur:
-//            System.out.println("Illegal Move Made, attempt to remove a piece where one does not exist");
-//            answer = false;
-//        }
-//
-//        boolean millFormed = curr_state.checkMoveMadeMillNoUpdate(move, tempStoneType);
-//        //Check if a piece isn't removed when there is a mill made
-//        if(millFormed && C.equalsIgnoreCase("r0")) {
-//            //Uncomment in the case printing should occur:
-//            System.out.println("Illegal Move Made, didn't remove piece when mill was made");
-//            answer = false;
-//        }
-//
-//        //Check if a piece is removed when there isn't a mill made
-//        if(!millFormed && !C.equalsIgnoreCase("r0")) {
-//            //Uncomment in the case printing should occur:
-//            System.out.println("Illegal Move Made, tried removing a piece when a mill wasn't made");
-//            answer = false;
-//        }
-//
-//        if(!A.contains("h")) {
-//            //Checks if a player attempts to move a piece that isn't theirs
-//            if((curr_state.board.get(A).equalsIgnoreCase(oppStone) && player == 0) || (curr_state.board.get(A).equalsIgnoreCase(playerStone) && player == 1)) {
-//                //Uncomment in the case printing should occur:
-//                System.out.println("Illegal Move Made, attempt to move a stone that isn't owned by the player");
-//                answer = false;
-//            }
-//        }
-//
-//        //Check that if the player is in phase 2 that they do not "fly"
-//        if(curr_state.stoneHand[player] == 0 && curr_state.stonePlaced[player] > 3) {
-//            boolean isValid = false;
-//            //Check that B is a possible adjacent move of B
-//            for(String possibleMove : GameConstants.ADJACENT_MOVES.get(A)) {
-//                if(possibleMove.equalsIgnoreCase(B)) {
-//                    isValid = true;
-//                }
-//            }
-//
-//            if(!isValid) {
-//                //Uncomment in the case printing should occur:
-//                System.out.println("Illegal Move Made, moved not to an adjacent location");
-//                answer = false;
-//            }
-//        }
-//        System.out.println("Time to validate opp's move: " + (System.nanoTime() - startTime)/1_000_000L);
-//        return answer;
-//    }
+    /**
+     * Check for illegal moves made by a player
+     * @param move: the move to be checked
+     * @param player: the player making the move
+     * @return true if the move is legal, else false
+     */
+    public static boolean checkLegalMove(String move, int player) {
+        long startTime = System.nanoTime();
+        boolean answer = true;
+
+        String A = move.substring(0,2);
+        String B = move.substring(3,5);
+        String C = move.substring(6,8);
+
+        //System.out.println(curr_state.board.get(A));
+
+        String tempStoneType = "";
+
+        //Get the correct stone type for the check
+        if(player == 1) {
+            tempStoneType = oppStone;
+        } else {
+            tempStoneType = playerStone;
+        }
+
+        //Check that the string is in the correct format
+        if(!GameConstants.ADJACENT_MOVES.containsKey(A) && !A.equalsIgnoreCase("h1") && !A.equalsIgnoreCase("h2")) {
+            //Uncomment in the case printing should occur:
+            System.out.println("Incorrect move format, part A is incorrect");
+            answer = false;
+        } else if (!GameConstants.ADJACENT_MOVES.containsKey(B)) {
+           //Uncomment in the case printing should occur:
+            System.out.println("Incorrect move format, part B is incorrect");
+            answer = false;
+        } else if (!GameConstants.ADJACENT_MOVES.containsKey(C) && !C.equalsIgnoreCase("r0")) {
+            //Uncomment in the case printing should occur:
+            //System.out.println("Incorrect move format, part C is incorrect")
+            answer = false;
+        }
+
+        //Checks if a player attempts to place a piece out of the opponent's hand
+        String correctHand = (player == 1) ? oppHand : playerHand;
+        if((A.equalsIgnoreCase("h1") && playerHand == "h1" && player == 1) || (A.equalsIgnoreCase("h2") && playerHand == "h2" && player == 1) || (A.equalsIgnoreCase("h1") && oppHand == "h1" && player == 0) || (A.equalsIgnoreCase("h2") && oppHand == "h2" && player == 0)) {
+            //Uncomment in the case printing should occur:
+            System.out.println("Illegal Move Made, attempt to place a stone out of the other player's hand");
+            answer = false;
+        }
+
+        //Checks if a piece is attempted to be placed without having any in hand to place
+        if(curr_state.stoneHand[player] == 0 && A.contains("h")) {
+            //Uncomment in the case printing should occur:
+            //             System.out.println("Illegal Move Made, attempt to place a stone with out having one in hand");
+            answer = false;
+        }
+
+        //Check that when placing a piece there is not already one in that position
+        if(!curr_state.openSlots.contains(B)) {
+            //Uncomment in the case printing should occur:
+            System.out.println("Illegal Move Made, attempt to place a stone on a non-empty position");
+            answer = false;
+        }
+
+       //Check if a piece is attempted to be removed where a piece does not exist
+       if(curr_state.openSlots.contains(C)) {
+            //Uncomment in the case printing should occur:
+            System.out.println("Illegal Move Made, attempt to remove a piece where one does not exist");
+            answer = false;
+        }
+
+        boolean millFormed = curr_state.checkMoveMadeMillNoUpdate(move, tempStoneType);
+        //Check if a piece isn't removed when there is a mill made
+        if(millFormed && C.equalsIgnoreCase("r0")) {
+            //Uncomment in the case printing should occur:
+           System.out.println("Illegal Move Made, didn't remove piece when mill was made");
+            answer = false;
+        }
+
+        //Check if a piece is removed when there isn't a mill made
+        if(!millFormed && !C.equalsIgnoreCase("r0")) {
+            //Uncomment in the case printing should occur:
+            System.out.println("Illegal Move Made, tried removing a piece when a mill wasn't made");
+            answer = false;
+        }
+
+        if(!A.contains("h")) {
+            //Checks if a player attempts to move a piece that isn't theirs
+            if((curr_state.board.get(A).equalsIgnoreCase(oppStone) && player == 0) || (curr_state.board.get(A).equalsIgnoreCase(playerStone) && player == 1)) {
+                //Uncomment in the case printing should occur:
+                System.out.println("Illegal Move Made, attempt to move a stone that isn't owned by the player");
+                answer = false;
+           }
+        }
+
+        //Check that if the player is in phase 2 that they do not "fly"
+        if(curr_state.stoneHand[player] == 0 && curr_state.stonePlaced[player] > 3) {
+            boolean isValid = false;
+            //Check that B is a possible adjacent move of B
+            for(String possibleMove : GameConstants.ADJACENT_MOVES.get(A)) {
+                if(possibleMove.equalsIgnoreCase(B)) {
+                    isValid = true;
+                }
+            }
+
+            if(!isValid) {
+                //Uncomment in the case printing should occur:
+                System.out.println("Illegal Move Made, moved not to an adjacent location");
+                answer = false;
+            }
+        }
+        System.out.println("Time to validate opp's move: " + (System.nanoTime() - startTime)/1_000_000L);
+        return answer;
+    }
 
     /**
      * Process the move returned by the ref and update the state
@@ -350,77 +350,70 @@ public class PlayerGemini {
         return "Error";
     }
 
-    public static String getGeminiMoves(Client client) throws IOException, HttpException{
+    public static String getGeminiMoves(Client client, String additions) throws IOException, HttpException{
+        StringBuilder adjacentMoves = new StringBuilder();
+        for (Map.Entry<String, String[]> entry : GameConstants.ADJACENT_MOVES.entrySet()) {
+            adjacentMoves.append(entry.getKey()).append(": ");
+            adjacentMoves.append(String.join(", ", entry.getValue()));
+            adjacentMoves.append("\n");
+        }
+
+        StringBuilder boardState = new StringBuilder();
+        for (Map.Entry<String, String> entry : curr_state.board.entrySet()) {
+            boardState.append(entry.getKey()).append(" = ").append(entry.getValue()).append("\n");
+        }
+
+        StringBuilder millConditions = new StringBuilder();
+        for (List<String> entry : GameConstants.MILL_CONDITIONS) {
+            millConditions.append(entry).append("\n");
+        }
+
+
         String prompt = """
-                You are tasked with finding the next best moves for a Lasker Morris game, according to a specific board configuration.
+                """ + additions + """
+                You are tasked with finding the next best moves for a Lasker Morris game, according to a specific board configuration. It is your turn.
                 Your stone is represented by:
                 """ + playerStone + """
+                Your opponent's stone is represented by:
+                """ + oppStone + """
                 your hand is represented by
                 """ + playerHand + """
                 
                 The rule of the game is of follow:
-                    The rules of Lasker Morris, you must win while following legal moves. Look as many moves ahead as possible.
-                    Please understand the rules of Lasker Morris and follow them
-                    You cannot place pieces ontop of where one already is
-                    Take your time computing, up to a minute, and consider as many steps ahead as possible
-                    While you have stones in hand they must be placed before you can move pieces
-                    Pieces cannot be placed ontop of each other
-                    You can only place pieces on allowed coordinates, as listed below in the current board state
-                    Imagine the board as a structure as follows:
-                          a7 ---------------- d7 ----------------- g7
-                          |                  |                     |
-                          |      b6 --------- d6 --------- f6      |
-                          |     |            |            |        |
-                          |     |      c5 --- d5 --- e5   |        |
-                          |     |      |           |      |        |
-                          a4 --- b4 --- c4            e4 --- f4 --- g4
-                          |     |      |           |      |        |
-                          |     |      c3 --- d3 --- e3   |        |
-                          |     |            |            |        |
-                          |      b2 --------- d2 --------- f2      |
-                          |                  |                     |
-                          a1 ---------------- d1 ----------------- g1
-                    A combination of letter denoting the column and a number denoting the row are used to mark positions
-                    The ONLY valid positions are one appearing on the above chart
-                    The state of each position is shown below:
+                Players can place at most 10 pieces from their deck.
+                
+                You must take an action every turn to continue, whether that is placing or moving a piece. If you cannot, you lose.
+                
+                You can only remove one opponent piece a turn if you have all three positions found in the list of mills:""" + millConditions + """
+ 
+                Pieces when not in the "flying" stage must only be able to move to adjacent positions. These adjacent positions are described in:
+                """ + adjacentMoves + """
+                If a player has 3 pieces remaining (including hand + deck) then they can enter a "flying" stage where pieces can move to any position.
+                If a player is reduced to 2 pieces (including hand + deck) then they lose.
+                If a player immobilizes an opponent's pieces, preventing them from having any available actions then they win, provided they cannot place another piece.
+                
+                The data structure for the State of the game, or the board configuration is as follow:
+                """ + curr_state.board + """
                 
                 The current board right now is (format: location = type of stone):
-                """ + "a1 = " + curr_state.board.get("a1") + """
-                """ + "d1 = " + curr_state.board.get("d1") + """
-                """ + "g1 = " + curr_state.board.get("g1") + """
-                """ + "b2 = " + curr_state.board.get("b2") + """
-                """ + "d2 = " + curr_state.board.get("d2") + """
-                """ + "f2 = " + curr_state.board.get("f2") + """
-                """ + "c3 = " + curr_state.board.get("c3") + """
-                """ + "d3 = " + curr_state.board.get("d3") + """
-                """ + "e3 = " + curr_state.board.get("e3") + """
-                """ + "e4 = " + curr_state.board.get("e4") + """
-                """ + "f4 = " + curr_state.board.get("f4") + """
-                """ + "g4 = " + curr_state.board.get("g4") + """
-                """ + "a4 = " + curr_state.board.get("a4") + """
-                """ + "b4 = " + curr_state.board.get("b4") + """
-                """ + "c4 = " + curr_state.board.get("c4") + """
-                """ + "c5 = " + curr_state.board.get("c5") + """
-                """ + "d5 = " + curr_state.board.get("d5") + """
-                """ + "e5 = " + curr_state.board.get("e5") + """
-                """ + "f6 = " + curr_state.board.get("f6") + """
-                """ + "d6 = " + curr_state.board.get("d6") + """
-                """ + "b6 = " + curr_state.board.get("b6") + """
-                """ + "g7 = " + curr_state.board.get("g7") + """
-                """ + "d7 = " + curr_state.board.get("d7") + """
-                """ + "a7 = " + curr_state.board.get("a7") + """
+                """ + boardState + """
                 If the location is equal to empty, that means there is no stone at that specific location.
                 
-                You must give the next best move to be made that will ultimately lead you to a win.
-                You must only answer in the format of "<x1> <y1> <z1>", where x1, y1, z1, are the locations as described in the game rules.
+               You must give the next best move to be made that will optimally lead you to a win.
                 
-                To place a stone from your hand onto the board use the format:
-                
-                <your hand> <placement location> r0
-                
-                Pieces cannot be placed ontop of each other
-                
+               You MUST ONLY answer in the format of "<x1> <y1> <z1>", where x1, y1 are the locations as described in the game rules and z1 is the piece to be removed. 
+            
+               If you are placing a piece, then <x1> is h1 (if your stone is B) and h2 (if your stone is O)
+              
+               If you have not formed a mill this turn, then you must put "r0" for z1.
+      
+                Examples moves:
+                 - Move: a7 a4 r0 (Standard move)
+                 - Move: h1 a4 r0 (Placing from hand, player stone is B)
+                 - Move: c1 c4 a1 (Forming a mill and removing opponent piece at a1)
+               
                 Say nothing except for the 3 characters representing your move
+                You must say at least 3 characters representing your move
                 """;
 
         CompletableFuture<GenerateContentResponse> responseFuture =
@@ -434,6 +427,13 @@ public class PlayerGemini {
                             resFuture.complete(response.text());
                         })
                 .join();
+
+        String attempt = resFuture.join();
+
+        if(!checkLegalMove(attempt, 0)) {
+            String redefined = "Your previous move: " + attempt + " Was invalid, please generate a different legal move";
+            getGeminiMoves(client, redefined);
+        }
 
         return resFuture.join();
     }
