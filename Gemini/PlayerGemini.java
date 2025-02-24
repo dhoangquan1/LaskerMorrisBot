@@ -52,6 +52,7 @@ public class PlayerGemini {
             //Game playing with minimax
             if(!input.startsWith("END")) {
                 String bestMove = getGeminiMoves(client);
+                //System.out.printf(bestMove);
                 String[] m = bestMove.split(" ");
 
                 //Increase time limit after the first run
@@ -65,6 +66,8 @@ public class PlayerGemini {
 
                 //Report the move to the referee
                 System.out.printf("%s %s %s\n", m[0], m[1], m[2]);
+                printBoard();
+                System.out.printf(bestMove);
                 System.out.flush();
             }
 
@@ -332,7 +335,7 @@ public class PlayerGemini {
     public static String getAPIKey(){
         Properties props = new Properties();
 
-        try (FileInputStream fis = new FileInputStream("config.env")) {
+        try (FileInputStream fis = new FileInputStream("./Gemini/config.env")) {
             props.load(fis);
             String apiKey = props.getProperty("GEMINI_API_KEY");
 
@@ -356,19 +359,68 @@ public class PlayerGemini {
                 """ + playerHand + """
                 
                 The rule of the game is of follow:
-                    [FILL OUT RULES IN DETAILS HERE]
-                
-                The data structure for the State of the game, or the board configuration is as follow:
-                    [FILL OUT DATA STRUCTURE IN DETAILS HERE]
+                    The rules of Lasker Morris, you must win while following legal moves. Look as many moves ahead as possible.
+                    Please understand the rules of Lasker Morris and follow them
+                    You cannot place pieces ontop of where one already is
+                    Take your time computing, up to a minute, and consider as many steps ahead as possible
+                    While you have stones in hand they must be placed before you can move pieces
+                    Pieces cannot be placed ontop of each other
+                    You can only place pieces on allowed coordinates, as listed below in the current board state
+                    Imagine the board as a structure as follows:
+                          a7 ---------------- d7 ----------------- g7
+                          |                  |                     |
+                          |      b6 --------- d6 --------- f6      |
+                          |     |            |            |        |
+                          |     |      c5 --- d5 --- e5   |        |
+                          |     |      |           |      |        |
+                          a4 --- b4 --- c4            e4 --- f4 --- g4
+                          |     |      |           |      |        |
+                          |     |      c3 --- d3 --- e3   |        |
+                          |     |            |            |        |
+                          |      b2 --------- d2 --------- f2      |
+                          |                  |                     |
+                          a1 ---------------- d1 ----------------- g1
+                    A combination of letter denoting the column and a number denoting the row are used to mark positions
+                    The ONLY valid positions are one appearing on the above chart
+                    The state of each position is shown below:
                 
                 The current board right now is (format: location = type of stone):
                 """ + "a1 = " + curr_state.board.get("a1") + """
                 """ + "d1 = " + curr_state.board.get("d1") + """
-                    [FILL OUT THE REST HERE]
+                """ + "g1 = " + curr_state.board.get("g1") + """
+                """ + "b2 = " + curr_state.board.get("b2") + """
+                """ + "d2 = " + curr_state.board.get("d2") + """
+                """ + "f2 = " + curr_state.board.get("f2") + """
+                """ + "c3 = " + curr_state.board.get("c3") + """
+                """ + "d3 = " + curr_state.board.get("d3") + """
+                """ + "e3 = " + curr_state.board.get("e3") + """
+                """ + "e4 = " + curr_state.board.get("e4") + """
+                """ + "f4 = " + curr_state.board.get("f4") + """
+                """ + "g4 = " + curr_state.board.get("g4") + """
+                """ + "a4 = " + curr_state.board.get("a4") + """
+                """ + "b4 = " + curr_state.board.get("b4") + """
+                """ + "c4 = " + curr_state.board.get("c4") + """
+                """ + "c5 = " + curr_state.board.get("c5") + """
+                """ + "d5 = " + curr_state.board.get("d5") + """
+                """ + "e5 = " + curr_state.board.get("e5") + """
+                """ + "f6 = " + curr_state.board.get("f6") + """
+                """ + "d6 = " + curr_state.board.get("d6") + """
+                """ + "b6 = " + curr_state.board.get("b6") + """
+                """ + "g7 = " + curr_state.board.get("g7") + """
+                """ + "d7 = " + curr_state.board.get("d7") + """
+                """ + "a7 = " + curr_state.board.get("a7") + """
                 If the location is equal to empty, that means there is no stone at that specific location.
                 
                 You must give the next best move to be made that will ultimately lead you to a win.
                 You must only answer in the format of "<x1> <y1> <z1>", where x1, y1, z1, are the locations as described in the game rules.
+                
+                To place a stone from your hand onto the board use the format:
+                
+                <your hand> <placement location> r0
+                
+                Pieces cannot be placed ontop of each other
+                
+                Say nothing except for the 3 characters representing your move
                 """;
 
         CompletableFuture<GenerateContentResponse> responseFuture =
