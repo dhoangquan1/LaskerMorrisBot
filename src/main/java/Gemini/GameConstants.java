@@ -1,3 +1,5 @@
+package Gemini;
+
 import java.util.*;
 
 public class GameConstants {
