@@ -355,7 +355,7 @@ public class Player {
                 eval += checkUtil_PiecesConfig(state, playerType);
             }else {
                 eval += checkUtil_ClosedMills(state) * 40;
-                eval += checkUtil_MillsCount(state) * 30;
+                eval += checkUtil_MillsCount(state) * 50;
                 eval += checkUtil_PiecesLeft(state) * 11;
                 eval += checkUtil_BlockedPieces(state) * 10;
                 eval += checkUtil_DoubleMillsCount(state) * 6;
