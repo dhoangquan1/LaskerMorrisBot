@@ -1,3 +1,5 @@
+package Gemini;
+
 import java.util.*;
 
 /**
@@ -72,7 +74,7 @@ public class State {
                     String m2 = this.board.get(c.get(1));
                     String m3 = this.board.get(c.get(2));
                     if (m1.equals(m2) && m2.equals(m3)){
-                        if(stoneType.equals(Player.playerStone)){
+                        if(stoneType.equals(PlayerGemini.playerStone)){
                             this.playerMill.add(c);
                         }else{
                             this.oppMill.add(c);
