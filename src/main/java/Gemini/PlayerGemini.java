@@ -18,6 +18,7 @@ public class PlayerGemini {
     public static String playerHand = "";
     public static String oppHand = "";
     public static String stoneType = "";
+    public static String lastMove = "";
 
     public static long timeLimit = 50000;
     public static boolean firstRun = true;
@@ -48,6 +49,7 @@ public class PlayerGemini {
                 oppHand = "h2";
             }else {
                 process_opponent_move(input);
+                lastMove = input;
             }
 
             //Game playing with minimax
@@ -359,7 +361,12 @@ public class PlayerGemini {
 
         StringBuilder boardState = new StringBuilder();
         for (Map.Entry<String, String> entry : curr_state.board.entrySet()) {
-            boardState.append(entry.getKey()).append(" = ").append(entry.getValue()).append("\n");
+            if(entry.getValue().equals("")){
+                boardState.append(entry.getKey()).append(" = ").append("EMPTY").append("\n");
+            }else {
+                boardState.append(entry.getKey()).append(" = ").append(entry.getValue()).append("\n");
+            }
+
         }
 
         StringBuilder millConditions = new StringBuilder();
@@ -386,6 +393,9 @@ public class PlayerGemini {
                 The amount of stones that your opponent have left in their hand is:
                 """ + curr_state.stoneHand[1] + """
                 
+                The last move that was made by your opponent is:
+                """ + lastMove + """
+                                
                 The locations on the board that is empty or does not have a stone yet:
                 """ + curr_state.openSlots + """
                 
@@ -395,13 +405,13 @@ public class PlayerGemini {
                 
                 You must take an action every turn to continue: You MUST either place a new stone or move an already placed stone.
                     If you choose to place a stone from your hand to the board, then you can place it at any location that is empty, but you must have a stone in your hand.
-                    If you choose to move your stone that is already on the board, then you can move it to any location that is empty and adjacent to the original stone's location.
+                    If you choose to move your stone that is already on the board, then you must move it to any location that is empty and adjacent to the original stone's location.
                         These adjacent positions are described in (location: list of adjacent locations):
                         """ + adjacentMoves + """
                     Only and when you have 3 stones left in total, in both your hand and on the board, then you enter the "flying" phase.
                     The "flying" phase is where you can choose to move any of your stones to any empty locations on the board.
                     You MUST only move and place a stone of your type.
-                    You MUST only move and place your stone to an empty location (no stone at that location).
+                    You MUST only move and place your stone to an empty location.
                     You MUST only use your own hand and not your opponent's hand (your hand's representation).
                     If you do not have a stone in hand, then you MUST move your stone that is on the board to an empty location adjacent to it.
                 
@@ -435,7 +445,7 @@ public class PlayerGemini {
                     
                 The current board right now is (format: location = type of stone):
                 """ + boardState + """
-                If the location is equal to empty, that means there is no stone at that specific location.
+                If the location is equal to EMPTY, that means there is no stone at that specific location.
                 If the location is equal to opponent's stone, that means there is a opponent's stone at that specific location.
                 If the location is equal to your stone representation, that means you have a stone at that specific location (that may be able to move).
                 You MUST play according to this current board state.
@@ -463,8 +473,10 @@ public class PlayerGemini {
                 If you are placing a piece from your hand, then <x1> is h1 (if your stone is B) and h2 (if your stone is O)
                 Else, <x1> is the location of your stone on the board that you want to move.
                 You must move your stone on the board if you do not have any stones left in your hand (meaning <x1> cannot be equal to "h1" or "h2").
+                If you choose to move your stone from the board, then you should look for the stones of your type that is adjacent to an empty spot (check the current board configuration and the Adjacent locations mappings)
                 
                 <y1> is the location of an empty spot that you will move or place your stone to.
+                Check the list of empty locations, <y1> must be a location from that list.
                 
                 If your move have formed a mill this turn, then <z1> is the location of your opponent's stone that you will remove.
                 If you have not formed a mill this turn, then you must put "r0" for <z1>.
@@ -475,9 +487,10 @@ public class PlayerGemini {
                  - Move: h1 a4 r0 (Placing from hand to a4)
                  - Move: c1 c4 a1 (Forming a mill by moving your stone from c1 to c4, and removing opponent piece at a1)
                
-                Say nothing except for the 3 characters (format: "<x1> <y1> <z1>") representing your move
-                You must say at least 3 characters (format: "<x1> <y1> <z1>") representing your move
-                Your move must always be valid according to the game constraints, and under the circumstances of the current board configuration.
+               Your move must always be valid according to the game constraints, and under the circumstances of the current board configuration.
+                
+               Say nothing except for the 3 characters (format: "<x1> <y1> <z1>") representing your move
+               You must say at least 3 characters (format: "<x1> <y1> <z1>") representing your move
                 """;
 
         String legalCheck = "";
@@ -494,16 +507,12 @@ public class PlayerGemini {
             CompletableFuture<String> resFuture = new CompletableFuture<>();
             responseFuture
                     .thenAccept(response -> resFuture.complete(response.text().trim()))
-                    .exceptionally(ex -> {
-                        resFuture.completeExceptionally(ex);
-                        return null;
-                    })
                     .join();
 
             try {
                 attempt = resFuture.join();
             } catch (Exception e) {
-                break;
+                continue;
             }
 
             legalCheck = checkLegalMove(attempt, 0);
@@ -511,6 +520,10 @@ public class PlayerGemini {
 
             tries++;
         }while (!legalCheck.equals("SUCCESS") && tries < maxTries);
+
+        if (!legalCheck.equals("SUCCESS")) {
+            return "FAILED_TO_GENERATE_VALID_MOVE";
+        }
 
         //System.out.println(prompt);
         return attempt;
