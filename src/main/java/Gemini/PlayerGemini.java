@@ -20,7 +20,8 @@ public class PlayerGemini {
     public static String stoneType = "";
     public static String lastMove = "";
 
-    public static long timeLimit = 50000;
+    public static long timeLimit = 10000;
+    public static int maxTries = 2;
     public static boolean firstRun = true;
 
     public static void main(String[] args) throws IOException, HttpException, InterruptedException {
@@ -54,17 +55,8 @@ public class PlayerGemini {
 
             //Game playing with minimax
             if(!input.startsWith("END")) {
-                long startTime = System.currentTimeMillis();
                 String bestMove = getGeminiMoves(client);
 
-                if(bestMove.length()!=8){
-                    bestMove = getARandomMove();
-                }
-
-                long timeLeft = timeLimit - (System.currentTimeMillis() - startTime);
-                if (timeLeft > 0){
-                    Thread.sleep(timeLeft);
-                }
                 //Report the move to the referee
                 System.out.println(bestMove);
                 System.out.flush();
@@ -118,7 +110,7 @@ public class PlayerGemini {
             //Uncomment in the case printing should occur:
             return ("Incorrect move format, part <x1> is incorrect");
         } else if (!GameConstants.ADJACENT_MOVES.containsKey(B)) {
-           //Uncomment in the case printing should occur:
+            //Uncomment in the case printing should occur:
             return ("Incorrect move format, part <y1> is incorrect");
             //System.out.println("Incorrect move format, part B is incorrect");
         } else if (!GameConstants.ADJACENT_MOVES.containsKey(C) && !C.equalsIgnoreCase("r0")) {
@@ -129,45 +121,48 @@ public class PlayerGemini {
 
         //Checks if a player attempts to place a piece out of the opponent's hand
         String correctHand = (player == 1) ? oppHand : playerHand;
-        if((A.equalsIgnoreCase("h1") && playerHand == "h1" && player == 1) || (A.equalsIgnoreCase("h2") && playerHand == "h2" && player == 1) || (A.equalsIgnoreCase("h1") && oppHand == "h1" && player == 0) || (A.equalsIgnoreCase("h2") && oppHand == "h2" && player == 0)) {
+        if((A.equalsIgnoreCase("h1") && playerHand.equals("h1") && player == 1) || (A.equalsIgnoreCase("h2") && playerHand.equals("h2") && player == 1) || (A.equalsIgnoreCase("h1") && oppHand == "h1" && player == 0) || (A.equalsIgnoreCase("h2") && oppHand == "h2" && player == 0)) {
             //Uncomment in the case printing should occur:
-            return ("Illegal Move Made, attempt to place a stone out of the other player's hand");
+            return ("Illegal Move Made, attempt to place a stone out of the other player's hand. Please play only from your hand");
             //System.out.println("Illegal Move Made, attempt to place a stone out of the other player's hand");
         }
 
         //Checks if a piece is attempted to be placed without having any in hand to place
         if(curr_state.stoneHand[player] == 0 && A.contains("h")) {
             //Uncomment in the case printing should occur:
-            return ("Illegal Move Made, attempt to place a stone with out having one in hand");
+            return ("Illegal Move Made, attempt to place a stone with out having one in hand. Please move your stone from the board instead.");
             //             System.out.println("Illegal Move Made, attempt to place a stone with out having one in hand");
         }
 
         //Check that when placing a piece there is not already one in that position
         if(!curr_state.openSlots.contains(B)) {
             //Uncomment in the case printing should occur:
-            return ("Illegal Move Made, attempt to place a stone on a non-empty position");
+            return ("Illegal Move Made, attempt to place a stone on a non-empty position. Please choose your <y1> location to be an EMPTY location on the board.");
             //System.out.println("Illegal Move Made, attempt to place a stone on a non-empty position");
         }
 
-       //Check if a piece is attempted to be removed where a piece does not exist
-       if(curr_state.openSlots.contains(C)) {
+        //Check if a piece is attempted to be removed where a piece does not exist
+        if(!C.equals("r0") && curr_state.openSlots.contains(C)) {
             //Uncomment in the case printing should occur:
-           return ("Illegal Move Made, attempt to remove a piece where one does not exist");
+            return ("Illegal Move Made, attempt to remove a piece where one does not exist. Please remove a piece from a correct location of the board.");
             //System.out.println("Illegal Move Made, attempt to remove a piece where one does not exist");
         }
 
-        boolean millFormed = curr_state.checkMoveMadeMillNoUpdate(move, tempStoneType);
+
+        boolean millFormed = curr_state.checkMoveMadeMillNoUpdate(B, tempStoneType);
+
         //Check if a piece isn't removed when there is a mill made
         if(millFormed && C.equalsIgnoreCase("r0")) {
             //Uncomment in the case printing should occur:
-            return ("Illegal Move Made, didn't remove piece when mill was made");
-           //System.out.println("Illegal Move Made, didn't remove piece when mill was made");
+            //System.out.println("Illegal Move Made, didn't remove piece when mill was made");
+            return ("Illegal Move Made, didn't remove piece when mill was made. Please choose your <z1> to be a location of the opponent's stone that you want to take (NOT r0)");
+
         }
 
         //Check if a piece is removed when there isn't a mill made
         if(!millFormed && !C.equalsIgnoreCase("r0")) {
             //Uncomment in the case printing should occur:
-            return ("Illegal Move Made, tried removing a piece when a mill wasn't made");
+            return ("Illegal Move Made, tried removing a piece when a mill wasn't made. Please change your <z1> to be r0");
             //System.out.println("Illegal Move Made, tried removing a piece when a mill wasn't made");
         }
 
@@ -175,9 +170,9 @@ public class PlayerGemini {
             //Checks if a player attempts to move a piece that isn't theirs
             if((curr_state.board.get(A).equalsIgnoreCase(oppStone) && player == 0) || (curr_state.board.get(A).equalsIgnoreCase(playerStone) && player == 1)) {
                 //Uncomment in the case printing should occur:
-                return ("Illegal Move Made, attempt to move a stone that isn't owned by the player");
+                return ("Illegal Move Made, attempt to move a stone that isn't owned by the player. Please change your <x1> to a location of stone that is owned by you.");
                 //System.out.println("Illegal Move Made, attempt to move a stone that isn't owned by the player");
-           }
+            }
         }
 
         //Check that if the player is in phase 2 that they do not "fly"
@@ -187,12 +182,13 @@ public class PlayerGemini {
             for(String possibleMove : GameConstants.ADJACENT_MOVES.get(A)) {
                 if(possibleMove.equalsIgnoreCase(B)) {
                     isValid = true;
+                    break;
                 }
             }
 
             if(!isValid) {
                 //Uncomment in the case printing should occur:
-                return ("Illegal Move Made, moved not to an adjacent location");
+                return ("Illegal Move Made, moved not to an adjacent location. Please choose <x1> to be a different stone to move or choose <y1> to be an empty adjacent location.");
                 //System.out.println("Illegal Move Made, moved not to an adjacent location");
             }
         }
@@ -351,7 +347,7 @@ public class PlayerGemini {
         return "Error";
     }
 
-    public static String getGeminiMoves(Client client) throws IOException, HttpException{
+    public static String getGeminiMoves(Client client) throws IOException, HttpException, InterruptedException{
         StringBuilder adjacentMoves = new StringBuilder();
         for (Map.Entry<String, String[]> entry : GameConstants.ADJACENT_MOVES.entrySet()) {
             adjacentMoves.append(entry.getKey()).append(": ");
@@ -374,135 +370,112 @@ public class PlayerGemini {
             millConditions.append(entry).append("\n");
         }
 
-        String prompt = """
-                You are tasked with finding the next best move for a Lasker Morris game, according to the current board configuration. It is your turn.
-                You move must be valid and satisfy ALL of the game constraints.
-                
-                Your stone is represented by:
-                """ + playerStone + """
-                
-                Your opponent's stone is represented by:
-                """ + oppStone + """
-                
-                Your hand is represented by:
-                """ + playerHand + """
-                
-                The amount of stones that you have left in your hand is:
-                """ + curr_state.stoneHand[0] + """
-                
-                The amount of stones that your opponent have left in their hand is:
-                """ + curr_state.stoneHand[1] + """
-                
-                The last move that was made by your opponent is:
-                """ + lastMove + """
-                                
-                The locations on the board that is empty or does not have a stone yet:
-                """ + curr_state.openSlots + """
-                
-                                
-                The rule of the game is of follow:
-                Players start with 10 stones (also called pieces) in their hand.
-                
-                You must take an action every turn to continue: You MUST either place a new stone or move an already placed stone.
-                    If you choose to place a stone from your hand to the board, then you can place it at any location that is empty, but you must have a stone in your hand.
-                    If you choose to move your stone that is already on the board, then you must move it to any location that is empty and adjacent to the original stone's location.
-                        These adjacent positions are described in (location: list of adjacent locations):
-                        """ + adjacentMoves + """
-                    Only and when you have 3 stones left in total, in both your hand and on the board, then you enter the "flying" phase.
-                    The "flying" phase is where you can choose to move any of your stones to any empty locations on the board.
-                    You MUST only move and place a stone of your type.
-                    You MUST only move and place your stone to an empty location.
-                    You MUST only use your own hand and not your opponent's hand (your hand's representation).
-                    If you do not have a stone in hand, then you MUST move your stone that is on the board to an empty location adjacent to it.
-                
-                After every action that you take (placing or moving a stone), you MUST check if you have formed a mill.
-                 
-                When you placed three stones that have locations contiguous to each other, then you have formed a mill.                
-                    The sets of possible mills are:
-                    """ + millConditions + """
-                    Each set of mill has three locations.
-                    You have a mill when your stones are on all three locations of any of those sets.
-                    It does not have to be in the exact order.
-            
-                If after you check and see that you have formed a mill, you MUST always remove a stone that is placed on the board by your opponent.
-                    The stone that you will remove must not be part of the opponent's mills.
-                    Unless all stones placed by your opponent are part of their mill, then you remove any of their stone on the board.
-                    If there is no opponent's stone on the board, then you do not remove any stone.
-                    BUT if there is an opponent's stone on the board, then you MUST ALWAYS remove one.
-                                
-                If a player is reduced to 2 pieces (including hand + deck) then they lose.
-                If a player immobilizes an opponent's pieces, preventing them from having any available actions then they win, provided they cannot place another piece.
-                
-                The board data structure is a grid-like structure with: 
-                    the x-axis being letter a-g from left to right
-                    the y-axis being number 1-7 from bottom to top
-                Each location signifies the coordinate on the board, and it is in the format of "xy", where x is the x-axis in letter and y is the y-axis in number (example: a1).
-                Only the location listed on the current board are valid coordinates (You must play the exactly and only coordinates that are listed).
-                The connection between coordinates are signify by the list of adjacent locations.
-                    If a location has an adjacent locations, then they are connected, and vice versa.
-                    Three continuously connected locations are potentials for a mill.
-                    Meaning if you have stones of your type on a three continously-connected locations, you have made a mill.
-                    
-                The current board right now is (format: location = type of stone):
-                """ + boardState + """
-                If the location is equal to EMPTY, that means there is no stone at that specific location.
-                If the location is equal to opponent's stone, that means there is a opponent's stone at that specific location.
-                If the location is equal to your stone representation, that means you have a stone at that specific location (that may be able to move).
-                You MUST play according to this current board state.
-                
-                You must give the next best move to be made that will optimally lead you to a win.
-                You should consider these strategies when making your moves:
-                    Forming your own mill, and remove your opponent's piece.
-                    Blocking the opponent's setups so that they cannot form a mill.
-                    Check if your opponent about to form a mill so you can potentially block it (IMPORTANT).
-                    Preventing yourself from getting immobilized.
-                    Immobilizing your opponent.
-                    Optimizing moves to allow you to have more stones than your opponent.
-                    Setting up configurations where you can form a mill in the future.
-                    Closing out a win if you see an opportunity to.
-                    Good setup configurations might includes:
-                        Your mills share a common piece.
-                        Two of your stones are part of a mill setup, and the next location to form that mill is empty
-                        Three of your stones are part of a mill setup, and there are two potential locations that you can choose to form a mill
-                    ONLY setup appropriately to force your opponent to block you, or if your opponent cannot form a mill in their next turn.
-                    If your opponent can also form a mill in the next turn, it might be better to block their potential mill instead of setting up.
-                    When you are in flying phase, it is best to make actions that allow you to close out the game and create mills repetitively.
-                    
-                You MUST ONLY answer in the format of "<x1> <y1> <z1>", where x1, y1 are the locations as described in the game rules and z1 is the piece to be removed. 
-            
-                If you are placing a piece from your hand, then <x1> is h1 (if your stone is B) and h2 (if your stone is O)
-                Else, <x1> is the location of your stone on the board that you want to move.
-                You must move your stone on the board if you do not have any stones left in your hand (meaning <x1> cannot be equal to "h1" or "h2").
-                If you choose to move your stone from the board, then you should look for the stones of your type that is adjacent to an empty spot (check the current board configuration and the Adjacent locations mappings)
-                
-                <y1> is the location of an empty spot that you will move or place your stone to.
-                Check the list of empty locations, <y1> must be a location from that list.
-                
-                If your move have formed a mill this turn, then <z1> is the location of your opponent's stone that you will remove.
-                If you have not formed a mill this turn, then you must put "r0" for <z1>.
-                Remember to always check if you have made a mill this turn, and ALWAYS remove an opponent's stone if you did formed a mill.
-      
-                Examples moves:
-                 - Move: a7 a4 r0 (Standard move: moving your stone from a7 to a4)
-                 - Move: h1 a4 r0 (Placing from hand to a4)
-                 - Move: c1 c4 a1 (Forming a mill by moving your stone from c1 to c4, and removing opponent piece at a1)
-               
-               Your move must always be valid according to the game constraints, and under the circumstances of the current board configuration.
-                
-               Say nothing except for the 3 characters (format: "<x1> <y1> <z1>") representing your move
-               You must say at least 3 characters (format: "<x1> <y1> <z1>") representing your move
-                """;
+        String prompt =
+                "You are playing Lasker Morris according to the current board configuration. It is your turn.\n" +
+                "You must make a valid move according to ALL the rules.\n" +
+                "\n" +
+                "Your stone is: " + playerStone + "\n" +
+                "Your opponent's stone is: " + oppStone + "\n" +
+                "Your hand is represented by: " + playerHand + "\n" +
+                "\n" +
+                "Game Rules:\n" +
+                "\n" +
+                "Board:\n" +
+                "- Sparse grid, x-axis: a-g, y-axis: 1-7.\n" +
+                "- Locations: (number-letter) format (e.g., a1).\n" +
+                "\n" +
+                "Basic Restrictions:\n" +
+                "- Move/place only your stones.\n" +
+                "- Target location must be empty.\n" +
+                "- Start with 10 stones in hand.\n" +
+                "- If no stones in hand, move a stone on the board (but you can move stone on board even when you have stone in hand).\n" +
+                "\n" +
+                "Turn Actions:\n" +
+                "- Place a stone from hand (your stone type) to an EMPTY location.\n" +
+                "- Move a stone on the board: to an EMPTY adjacent location.\n" +
+                "  - Adjacent locations: " + adjacentMoves + "\n" +
+                "- After placing/moving, ALWAYS check if you have formed a mill. If your action led you to form a mill this turn, then you MUST take action regarding removing an opponent's piece (check Mill Removals rules below)\n" +
+                "\n" +
+                "Flying Phase:\n" +
+                "- If your total stones from your (board + hand) == 3, you can move any of your stone to any empty location.\n" +
+                "\n" +
+                "Mills Conditions:\n" +
+                "- Three of your stones contiguously adjacent to each other form a mill.\n" +
+                "- Possible mills: \n" +
+                millConditions + "\n" +
+                "- For example: If you have a stone on `a1` and `d1`, and you plan to place a stone to `g1`, that means you have formed a mill. \n" +
+                "Current Board:\n" +
+                boardState + "\n" +
+                "The board format is: location = Type of stone on that location. \n" +
+                "If the location = EMPTY, then there is no stone on that location. \n" +
+                "If the location = Your stone type, then you have a stone on that location. \n" +
+                "If the location = Opponent's stone type, then opponent has a stone on that location. \n" +
+                "The move that you are about to do will be updated to this board, so ALWAYS consider your own move this turn as if it is updated on here. \n" +
+                "\n" +
+                "Game State:\n" +
+                "- The number of your stones in hand: " + curr_state.stoneHand[0] + "\n" +
+                "- The number of your stones on board: " + (10 - curr_state.stoneHand[0]) + "\n" +
+                "- The number of opponent's stones in hand: " + curr_state.stoneHand[1] + "\n" +
+                "- The number of opponent's stones on board: " + (10 - curr_state.stoneHand[1]) + "\n" +
+                "- Empty locations on the board: " + curr_state.openSlots + "\n" +
+                "- The last move that was made by your opponent is: " + lastMove + "\n" +
+                "- Remember that the move you are calculating for this turn will update this board state, so check if the move you about to do will lead you to form a mill or not." + "\n" +
+                "\n" +
+                "Mill Removal:\n" +
+                "- If you form a mill this turn, you MUST ABSOLUTELY remove ONE opponent's stone from the board.\n" +
+                "- Remove an opponent's stone (e.g., a1).\n" +
+                "- Do not remove opponent's stones from their mills; unless all opponent stones are in mills, then remove any of their stones.\n" +
+                "- If no opponent stones, do not remove.\n" +
+                "- Always check if the move you are about to take will lead you to form a mill.\n" +
+                "\n" +
+                "Win Conditions:\n" +
+                "- Opponent has 2 or fewer stones.\n" +
+                "- Opponent is immobilized (Opponent cannot move any of their stones and they cannot place anymore stones).\n" +
+                "\n" +
+                "\n" +
+                "Strategy:\n" +
+                "   1. Prioritized Mill Check: After EACH of your potential moves, perform the following steps:\n" +
+                "       a. Temporarily update the current board state as if the move has been made. \n" +
+                "       b. Implement the following algorithm to check for mills:\n" +
+                "           i. Iterate through EACH of the possible mill formations (provided in `Mills Conditions`).\n" +
+                "           ii. For EACH mill formation, check if ALL three positions in that formation are now occupied by your stones in the *simulated* board state.\n" +
+                "           iii. If a mill is found, record the mill formations and proceed to step 2.\n" +
+                "       c. Undo the temporary board state update.\n" +
+                "   2. Mill Closure (If Mill Formed): If a mill was formed in step 1, select an opponent's stone to remove (according to `Mill Removal` rules). \n" +
+                "   3. Move Selection: \n" +
+                "       a. Game-Ending Moves: If there are any moves that will lead you to immediately win the game, such as immobilizing ALL of your opponent's stones or reduces ALL of their total stones to 2, then ALWAYS go for this move. \n" +
+                "       b. Mill-Closing Moves: If there are any moves that create a mill (identified in step 1), always prioritize those moves over any other moves (except for Game-Ending Moves). \n" +
+                "       c. Other Moves: If no mill-closing moves are available, consider other strategic moves (blocking, setting up potential mills, etc.). \n" +
+                "   4. Output:  Provide the move in the specified format.  Ensure <z1> is correctly set to the removed stone (if a mill was formed) or \"r0\" (if no mill).\n" +
+                "   It is important that your move should always prioritized forming a mill this turn over setting up. Meaning you should form a mill at any chance you get.\n" +
+                "\n" +
+                "Output Format:\n" +
+                "- <x1> <y1> <z1>\n" +
+                "- <x1>: place from hand (h1 if you are B, h2 if you are O) or stone location (move).\n" +
+                "- <y1>: Empty target location.\n" +
+                "- <z1>: Location of opponent's stone to remove (if mill), or r0 (no mill).\n" +
+                "- Ensure <z1> is r0 ONLY if NO mill was formed this turn. r0 is not a location on the board and is just a placeholder to signify not removing any stones" + "\n" +
+                "- Recheck your <y1> to make sure that it is empty (Check the Game State: <y1> must be within that list)" + "\n" +
+                "- Recheck your <x1> and <y1> move against the current board and the mill conditions to see if you have created a mill" +
+                "\n" +
+                "Examples moves:\n" +
+                "   - Move: a7 a4 r0 (Standard move: moving your stone from a7 to a4)\n" +
+                "   - Move: h1 a4 r0 (Placing from hand to a4)\n" +
+                "   - Move: c1 c4 a1 (Forming a mill by moving your stone from c1 to c4, and removing opponent piece at a1) \n" +
+                "\n" +
+                "Provide your move in the specified format. Do not say anything more than just the formatted answer.\n";
 
         String legalCheck = "";
-        String redefined = "";
+        StringBuilder redefined = new StringBuilder();
         String attempt = "";
         int tries = 0;
-        int maxTries = 5;
 
         do{
+            long startTime = System.currentTimeMillis();
+
             CompletableFuture<GenerateContentResponse> responseFuture =
                     client.async.models.generateContent(
-                            "gemini-2.0-flash-001", redefined + prompt, null);
+                            "gemini-2.0-flash-001", (prompt + redefined.toString()), null);
 
             CompletableFuture<String> resFuture = new CompletableFuture<>();
             responseFuture
@@ -512,20 +485,30 @@ public class PlayerGemini {
             try {
                 attempt = resFuture.join();
             } catch (Exception e) {
+                tries++;
                 continue;
             }
 
             legalCheck = checkLegalMove(attempt, 0);
-            redefined = "Your previous move: " + attempt + " was invalid, please generate a different legal move. The error was: " + legalCheck + "\n";
+            if (!legalCheck.equals("SUCCESS")) {
+                redefined.append("Your previous move: ").append(attempt)
+                        .append(" was invalid, please generate a different legal move. The error was: ")
+                        .append(legalCheck).append("\n");
+            }
 
             tries++;
+            long timeLeft = timeLimit - (System.currentTimeMillis() - startTime);
+            if (timeLeft > 0){
+                Thread.sleep(timeLeft);
+            }
+            //System.out.println(redefined + prompt);
         }while (!legalCheck.equals("SUCCESS") && tries < maxTries);
 
         if (!legalCheck.equals("SUCCESS")) {
-            return "FAILED_TO_GENERATE_VALID_MOVE";
+            return getARandomMove();
         }
 
-        //System.out.println(prompt);
+
         return attempt;
     }
 
