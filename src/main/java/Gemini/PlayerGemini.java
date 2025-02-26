@@ -20,8 +20,8 @@ public class PlayerGemini {
     public static String stoneType = "";
     public static String lastMove = "";
 
-    public static long timeLimit = 10000;
-    public static int maxTries = 2;
+    public static long timeLimit = 4000;
+    public static int maxTries = 5;
     public static boolean firstRun = true;
 
     public static void main(String[] args) throws IOException, HttpException, InterruptedException {
