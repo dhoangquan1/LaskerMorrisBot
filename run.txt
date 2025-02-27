@@ -1,2 +1,2 @@
-Player
-java Player.java
+Gemini.PlayerGemini
+Gemini.bat
