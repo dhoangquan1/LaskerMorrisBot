@@ -340,20 +340,20 @@ public class Player {
         eval += checkUtil_WinGame(state) * 5000;
 
         if(state.stoneHand[playerType] + state.stonePlaced[playerType] <= 3){
-            eval += checkUtil_ClosedMills(state) * 16;
+            eval += checkUtil_ClosedMills(state) * 40;
             eval += checkUtil_PiecesConfig(state, playerType);
         }else{
             if(state.stoneHand[playerType] > 0){
                 eval += checkUtil_ClosedMills(state) * 50;
                 eval += checkUtil_MillsCount(state) * 40;
-                eval += checkUtil_PiecesLeft(state) * 9;
+                eval += checkUtil_PiecesLeft(state) * 10;
                 eval += checkUtil_BlockedPieces(state) * 3;
                 eval += checkUtil_PiecesConfig(state, playerType);
             }else {
-                eval += checkUtil_ClosedMills(state) * 50;
-                eval += checkUtil_MillsCount(state) * 60;
+                eval += checkUtil_ClosedMills(state) * 55;
+                eval += checkUtil_MillsCount(state) * 70;
                 eval += checkUtil_PiecesLeft(state) * 15;
-                eval += checkUtil_BlockedPieces(state) * 15;
+                eval += checkUtil_BlockedPieces(state) * 10;
                 eval += checkUtil_DoubleMillsCount(state) * 8;
             }
         }
@@ -406,7 +406,7 @@ public class Player {
                 }
             }
         }
-        return (oppBlocked - playerBlocked);
+        return ((state.stonePlaced[0] - playerBlocked) - (state.stonePlaced[1] - oppBlocked));
     }
 
     //Heuristic 4: The difference in total pieces left
