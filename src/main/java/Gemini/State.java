@@ -94,7 +94,7 @@ public class State {
      * @param stoneType : the stone type of that move
      * @return true if the move formed a mill
      */
-    public Boolean checkMoveMadeMillNoUpdate(String move, String stoneType){
+    public Boolean checkMoveMadeMillNoUpdate(String from, String move, String stoneType){
         for (List<String> c: GameConstants.MILL_CONDITIONS){
             if(c.contains(move)){
                 int count = 0;
@@ -111,6 +111,9 @@ public class State {
                 String m3 = this.board.get(c.get(2));
                 if (Objects.equals(m3, stoneType)) {
                     count++;
+                }
+                if (from.equals(m1) || from.equals(m2) || from.equals(m3)){
+                    count--;
                 }
 
                 if (count >= 2){

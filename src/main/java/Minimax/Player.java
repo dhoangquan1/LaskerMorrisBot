@@ -348,17 +348,17 @@ public class Player {
             eval += checkUtil_PiecesConfig(state, playerType);
         }else{
             if(state.stoneHand[playerType] > 0){
-                eval += checkUtil_ClosedMills(state) * 40;
-                eval += checkUtil_MillsCount(state) * 20;
+                eval += checkUtil_ClosedMills(state) * 50;
+                eval += checkUtil_MillsCount(state) * 40;
                 eval += checkUtil_PiecesLeft(state) * 9;
                 eval += checkUtil_BlockedPieces(state) * 3;
                 eval += checkUtil_PiecesConfig(state, playerType);
             }else {
-                eval += checkUtil_ClosedMills(state) * 40;
-                eval += checkUtil_MillsCount(state) * 50;
+                eval += checkUtil_ClosedMills(state) * 50;
+                eval += checkUtil_MillsCount(state) * 60;
                 eval += checkUtil_PiecesLeft(state) * 11;
-                eval += checkUtil_BlockedPieces(state) * 10;
-                eval += checkUtil_DoubleMillsCount(state) * 6;
+                eval += checkUtil_BlockedPieces(state) * 15;
+                eval += checkUtil_DoubleMillsCount(state) * 8;
             }
         }
 

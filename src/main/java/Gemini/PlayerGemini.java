@@ -121,7 +121,7 @@ public class PlayerGemini {
 
         //Checks if a player attempts to place a piece out of the opponent's hand
         String correctHand = (player == 1) ? oppHand : playerHand;
-        if((A.equalsIgnoreCase("h1") && playerHand.equals("h1") && player == 1) || (A.equalsIgnoreCase("h2") && playerHand.equals("h2") && player == 1) || (A.equalsIgnoreCase("h1") && oppHand == "h1" && player == 0) || (A.equalsIgnoreCase("h2") && oppHand == "h2" && player == 0)) {
+        if((A.equalsIgnoreCase("h1") && playerHand.equals("h1") && player == 1) || (A.equalsIgnoreCase("h2") && playerHand.equals("h2") && player == 1) || (A.equalsIgnoreCase("h1") && oppHand.equals("h1") && player == 0) || (A.equalsIgnoreCase("h2") && oppHand.equals("h2") && player == 0)) {
             //Uncomment in the case printing should occur:
             return ("Illegal Move Made, attempt to place a stone out of the other player's hand. Please play only from your hand");
             //System.out.println("Illegal Move Made, attempt to place a stone out of the other player's hand");
@@ -148,8 +148,7 @@ public class PlayerGemini {
             //System.out.println("Illegal Move Made, attempt to remove a piece where one does not exist");
         }
 
-
-        boolean millFormed = curr_state.checkMoveMadeMillNoUpdate(B, tempStoneType);
+        boolean millFormed = curr_state.checkMoveMadeMillNoUpdate(A, B, tempStoneType);
 
         //Check if a piece isn't removed when there is a mill made
         if(millFormed && C.equalsIgnoreCase("r0")) {
@@ -473,38 +472,40 @@ public class PlayerGemini {
         do{
             long startTime = System.currentTimeMillis();
 
-            CompletableFuture<GenerateContentResponse> responseFuture =
-                    client.async.models.generateContent(
-                            "gemini-2.0-flash-001", (prompt + redefined.toString()), null);
-
-            CompletableFuture<String> resFuture = new CompletableFuture<>();
-            responseFuture
-                    .thenAccept(response -> resFuture.complete(response.text().trim()))
-                    .join();
-
             try {
+                CompletableFuture<GenerateContentResponse> responseFuture =
+                        client.async.models.generateContent(
+                                "gemini-2.0-flash-001", (prompt + redefined.toString()), null);
+
+                CompletableFuture<String> resFuture = new CompletableFuture<>();
+                responseFuture
+                        .thenAccept(response -> resFuture.complete(response.text().trim()))
+                        .join();
+
                 attempt = resFuture.join();
-            } catch (Exception e) {
+
+                legalCheck = checkLegalMove(attempt, 0);
+                if (!legalCheck.equals("SUCCESS")) {
+                    redefined.append("Your previous move: ").append(attempt)
+                            .append(" was invalid, please generate a different legal move. The error was: ")
+                            .append(legalCheck).append("\n");
+                }
+
                 tries++;
-                continue;
-            }
+                long timeLeft = timeLimit - (System.currentTimeMillis() - startTime);
+                if (timeLeft > 0){
+                    Thread.sleep(timeLeft);
+                }
 
-            legalCheck = checkLegalMove(attempt, 0);
-            if (!legalCheck.equals("SUCCESS")) {
-                redefined.append("Your previous move: ").append(attempt)
-                        .append(" was invalid, please generate a different legal move. The error was: ")
-                        .append(legalCheck).append("\n");
-            }
-
-            tries++;
-            long timeLeft = timeLimit - (System.currentTimeMillis() - startTime);
-            if (timeLeft > 0){
-                Thread.sleep(timeLeft);
+            } catch (Exception e) {
+                //System.out.println("FAILED");
+                return getARandomMove();
             }
             //System.out.println(redefined + prompt);
         }while (!legalCheck.equals("SUCCESS") && tries < maxTries);
 
         if (!legalCheck.equals("SUCCESS")) {
+            //System.out.println("FAILED");
             return getARandomMove();
         }
 
