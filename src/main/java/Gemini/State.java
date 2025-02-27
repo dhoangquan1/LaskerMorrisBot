@@ -112,7 +112,7 @@ public class State {
                 if (Objects.equals(m3, stoneType)) {
                     count++;
                 }
-                if (from.equals(m1) || from.equals(m2) || from.equals(m3)){
+                if (from.equals(c.get(0)) || from.equals(c.get(1)) || from.equals(c.get(2))){
                     count--;
                 }
 
