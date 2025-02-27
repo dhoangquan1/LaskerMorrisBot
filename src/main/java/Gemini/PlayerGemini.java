@@ -134,6 +134,12 @@ public class PlayerGemini {
             //             System.out.println("Illegal Move Made, attempt to place a stone with out having one in hand");
         }
 
+        if(!A.contains("h") && curr_state.board.get(A).equals("")) {
+            //Uncomment in the case printing should occur:
+            return ("Illegal Move Made, attempt to move a stone from an empty location. Please choose a different stone of yours to move.");
+            //             System.out.println("Illegal Move Made, attempt to place a stone with out having one in hand");
+        }
+
         //Check that when placing a piece there is not already one in that position
         if(!curr_state.openSlots.contains(B)) {
             //Uncomment in the case printing should occur:
