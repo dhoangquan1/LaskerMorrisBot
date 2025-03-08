@@ -1,4 +1,7 @@
-import java.util.*;
+package Gemini;
+
+import java.util.List;
+import java.util.Map;
 
 public class GameConstants {
     public static final List<List<String>> MILL_CONDITIONS = List.of(
