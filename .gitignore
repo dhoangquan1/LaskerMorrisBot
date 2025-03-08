@@ -1,5 +1,4 @@
 **/config.env
 .idea
 *.iml
-*.xml
 sensitive.txt

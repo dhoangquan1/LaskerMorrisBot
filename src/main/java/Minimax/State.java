@@ -1,3 +1,5 @@
+package Minimax;
+
 import java.util.*;
 
 /**

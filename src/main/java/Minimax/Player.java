@@ -1,4 +1,9 @@
-import java.util.*;
+package Minimax;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Scanner;
 
 public class Player {
     public static State curr_state = new State();
@@ -337,31 +342,23 @@ public class Player {
         int eval = 0;
         eval += checkUtil_WinGame(state) * 5000;
 
-        if (eval == -5000 || eval == 5000 ) {
-            return eval;
-        }
-
         if(state.stoneHand[playerType] + state.stonePlaced[playerType] <= 3){
-            eval += checkUtil_ClosedMills(state) * 16;
+            eval += checkUtil_ClosedMills(state) * 40;
             eval += checkUtil_PiecesConfig(state, playerType);
         }else{
             if(state.stoneHand[playerType] > 0){
-                eval += checkUtil_ClosedMills(state) * 40;
-                eval += checkUtil_MillsCount(state) * 20;
-                eval += checkUtil_PiecesLeft(state) * 9;
+                eval += checkUtil_ClosedMills(state) * 50;
+                eval += checkUtil_MillsCount(state) * 40;
+                eval += checkUtil_PiecesLeft(state) * 10;
                 eval += checkUtil_BlockedPieces(state) * 3;
                 eval += checkUtil_PiecesConfig(state, playerType);
             }else {
-                eval += checkUtil_ClosedMills(state) * 40;
-                eval += checkUtil_MillsCount(state) * 30;
-                eval += checkUtil_PiecesLeft(state) * 11;
+                eval += checkUtil_ClosedMills(state) * 55;
+                eval += checkUtil_MillsCount(state) * 70;
+                eval += checkUtil_PiecesLeft(state) * 15;
                 eval += checkUtil_BlockedPieces(state) * 10;
-                eval += checkUtil_DoubleMillsCount(state) * 6;
+                eval += checkUtil_DoubleMillsCount(state) * 8;
             }
-        }
-
-        if (eval > 5000 || eval == -5000) {
-            throw(new RuntimeException("Invalid Utility!"));
         }
 
         return eval;
@@ -412,7 +409,7 @@ public class Player {
                 }
             }
         }
-        return (oppBlocked - playerBlocked);
+        return ((state.stonePlaced[0] - playerBlocked) - (state.stonePlaced[1] - oppBlocked));
     }
 
     //Heuristic 4: The difference in total pieces left

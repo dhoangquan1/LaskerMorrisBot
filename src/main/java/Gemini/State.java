@@ -1,3 +1,5 @@
+package Gemini;
+
 import java.util.*;
 
 /**
@@ -92,16 +94,30 @@ public class State {
      * @param stoneType : the stone type of that move
      * @return true if the move formed a mill
      */
-    public Boolean checkMoveMadeMillNoUpdate(String move, String stoneType){
+    public Boolean checkMoveMadeMillNoUpdate(String from, String move, String stoneType){
         for (List<String> c: GameConstants.MILL_CONDITIONS){
             if(c.contains(move)){
-                if(this.board.get(c.get(0)).equals(stoneType)){
-                    String m1 = this.board.get(c.get(0));
-                    String m2 = this.board.get(c.get(1));
-                    String m3 = this.board.get(c.get(2));
-                    if (m1.equals(m2) && m2.equals(m3)){
-                        return true;
-                    }
+                int count = 0;
+
+                String m1 = this.board.get(c.get(0));
+                if (Objects.equals(m1, stoneType)) {
+                    count++;
+                }
+                String m2 = this.board.get(c.get(1));
+                if (Objects.equals(m2, stoneType)) {
+                    count++;
+                }
+
+                String m3 = this.board.get(c.get(2));
+                if (Objects.equals(m3, stoneType)) {
+                    count++;
+                }
+                if (from.equals(c.get(0)) || from.equals(c.get(1)) || from.equals(c.get(2))){
+                    count--;
+                }
+
+                if (count >= 2){
+                    return true; // if there are already 2 of the same type in this position, and we are placing the third, we have a mill. There shouldn't be 3 already.
                 }
             }
         }
