@@ -3,31 +3,108 @@
 
 Lasker Morris (also known as Ten Men's Morris) is a variant of Nine Men's Morris, where each player get ten pieces and their pieces can be moved any time in the first phase.
 
-This Lasker Morris Bot use a Minimax Algorithm with Alpha-Beta Pruning in order to seek the next best move within limitted time. The 
+There are two different bots that we implemented: Gemini API Bot and PLAYER Bot
+The **PLAYER Bot** uses a Minimax Algorithm with Alpha-Beta Pruning in order to seek the next best move within limitted time. To make sure the bot always have a respond by the end of the timer, we use Iterative Deepening algorithm to get the best moves in incrementing depths.
+
+The **Gemini API Bot** uses prompt to get moves. This bot is a demo for using Large Language Model in Game-Playing, and it is not supposed to make optimal moves to win the game. The Bot makes a random move within a time limit if it is uncapable of generating a valid move set.
 
 ------------------------
 ## ⚙️ Technologies Used
 -----------------------
-[![My Skills](https://skillicons.dev/icons?i=java)](https://skillicons.dev)
+[![My Skills](https://skillicons.dev/icons?i=java,maven)](https://skillicons.dev)
+
+- Others: Google Gemini API 0.1.0
 
 ------------------------
-## 🌟 Algorithm
+## 🎯 Program I/O
 -----------------------
-- **Authentication**: Register an account to join the portal.
-- **Single Sign-On Service**: Log in to your WPI account quickly with Microsoft Azure SSO.
-- **Profile Customization**: Add your GPA, grade, previous courseworks and experiences to your own profile.
-- **Course, Section & Position Creation**: Register a course and section that you teaches from a list of CS courses, and create new position listings with specific requirements
-- **Position Application**: Apply to a course that you are interested in.
-- **Personalized Recommendation**: Recommend positions based on your own skill sets.
-- **Sort and Filter**: Check out position listings based on your preference.
-- **Status Updates**: Review the status of your applications, or applicants if you are an instructor.
-- **All-in-one System**: Manage SAs efficiently with quick assignments, and ensure that students can only be SA exclusively to a section.
+### Color declaration:
+- Tell the bot which pieces color it will be: **blue** or **orange**
+- **Blue** goes first, and its hand will be represented as **"h1"**
+- **Orange** goes after, and its hand will be represented as **"h2"**
+    ```
+    blue
+    ```
+
+### I/O format:
+- Tell the bot which move set you will be making, or the bot will tell you what move it will make
+- The move format is: "x1 y1 z1"
+- **x1**: The location where the stone move from (hand or location of the board)
+- **y1**: The location where the stone move to (location of the board)
+- **z1**: The location of the stone to capture if mill formed (r0 if mill is not formed)
+    ```
+    h1 a7 r0
+    ```
+
+### Print Board:
+- At the end of the program, there is functions to print the board
+- The board is in a grid stucture
+- The x-axis is a-g from left to right
+- The y-axis is 1-7 from bottom to top
+    ```
+          a7 ---------------- d7 ---------------- g7
+          |                   |                    |
+          |      b6 --------- d6 --------- f6      |
+          |     |             |              |     |
+          |     |      c5 --- d5 --- e5      |     |
+          |     |      |              |      |     |
+          a4 --- b4 --- c4            e4 --- f4 --- g4
+          |     |      |              |      |     |
+          |     |      c3 --- d3 --- e3      |     |
+          |     |             |              |     |
+          |      b2 --------- d2 --------- f2      |
+          |                   |                    |
+          a1 ---------------- d1 ---------------- g1
+
+    ```
+
+### Interact with Referee (AutoPlay):
+- The program can interact with the referee program, implemented by SA Jake Molnia in CS4341
+- You can read more about the referee here:
+[Lasker Morris Referee](https://github.com/jake-molnia/CS4341-referee)
+
+------------------------
+## 🧠 Algorithms
+-----------------------
+### PLAYER Bot:
+- **Minimax**: is an algorithm that minimize the worst-case potential loss.
+- **Alpha-Beta Pruning**: allows to "prune" out branches that is worse than the previously assessed branches, in order to save search time.
+- **Utility Evaluation**: allows to evaluate a value of specific board configuration (whether if it is in favor of the player, and by how much).
+
+### Gemini API Bot:
+- **Prompting**: simple prompting and reprompt the Google Gemini API to return moves.
+
+------------------------
+## 🧮 Attributes
+-----------------------
+These are attributes that you can change in order to control the program/algorithm
+
+### Program Attributes
+
+| Name | Description | Value |
+|------|-------------|---------|
+| timeLimit |The time limit to run the program | 2s initially (4.9s after) |
+
+### Heuristic Evaluation Attributes
+
+| Name | Description | Value (Phase 1 - Phase 2 - Phase 3) |
+|------|-------------|---------|
+| ClosedMills | Utility if the mill was last closed by a player, and a stone is captured | 50-55-40 |
+| MillsCount | Utility for difference in the number of mills | 40-70-0 |
+| PiecesLeft | Utility for difference in the number of pieces left | 10-15-0 |
+| BlockedPieces | Utility for difference in the number of blocked pieces | 3-10-0 |
+| PiecesConfig | Utility for difference in configuration that only needs 1 stone to form a mill. (2-pieces config, 3-pieces config) | (10,7)-(0,0)-(10,1) |
+| DoubleMillsCount | Utility for difference in the number of mills that share a common stone | 0-0-8 |
+| WinGame | Utility for game-ending state | 5000-5000-5000 |
 
 ------------------------
 ## 🚀 Getting Started
 -----------------------
+### Requirements:
+- Apache Maven 3.9.9
+- Java 18+
 
-### Set up dependencies:
+### Set up dependencies (if running Gemini):
 - Create a python environment:
     ```
     python -m venv venv
@@ -38,60 +115,46 @@ This Lasker Morris Bot use a Minimax Algorithm with Alpha-Beta Pruning in order 
     ```
 - Download dependencies:
     ```
-    pip install -r requirements.txt
+    mvn clean install
     ```
 
 ------------------------
 ## 🖥️ Running the program
 -----------------------
+### To initialize the programs:
+- Compile all Maven programs with the following command:
+    ```
+    mvn compile
+    ```
 
-### To run this app:
-- Start the SAP application with the following command:
+### To run the Bots:
+- Start PLAYER with the following command:
     ```
-    python application.py
+    Minimax.bat
     ```
-
-### To run the tests:
-- run the tests for Model (unittest)
-    ``` 
-    python -m unittest -v tests/test_models.py 
+- Start Gemini API with the following command:
     ```
-- run the tests for routes (pytest)
+    Gemini.bat
     ```
-    python -m pytest -v tests/test_routes_1.py
-    ```
-- run the selenium tests
-    * Download the Chrome webdriver for your Chrome browser version (https://chromedriver.chromium.org/downloads); extract and copy it under `C:\Webdriver` folder.
-    * Run the SAP application in a terminal window: 
-        ```
-            python application.py
-        ```
-    * Run the selenium tests
-        ```
-            python tests/test_selenium.py
-        ```
 
 ------------------------
 ## 📚 Documentations
 -----------------------
-For more information on the app development process and design, check out the documentations in /documents to see user stories, web structure, and DB designs in details.
+For more information on the Bot design, check out the documentations in /documents to see heuristic explaination, program capabilties, and detailed instructions.
 
 ------------------------
 ## 🙏 Acknowledgements
 -----------------------
-- Professor Arslan Ay - CS-3733: Software Engineering
-- Flask-tasticCoders Team Members  
+- Professor Ruiz - CS4341: Introduction to AI
+- Contributors/Team Members 
     <div style="display: flex; gap: 10px; margin-top: 10px;">
-        <a href="https://github.com/iamkdao">
-            <img src="https://github.com/iamkdao.png" width="50" style="border-radius: 25px; overflow: hidden;">
-        </a>
         <a href="https://github.com/dhoangquan1">
             <img src="https://github.com/dhoangquan1.png" width="50" style="border-radius: 25px; overflow: hidden;">
         </a>
-        <a href="https://github.com/samnguyen3115">
-            <img src="https://github.com/samnguyen3115.png" width="50" style="border-radius: 25px; overflow: hidden;">
+        <a href="https://github.com/ElijahWPI">
+            <img src="https://github.com/ElijahWPI.png" width="50" style="border-radius: 25px; overflow: hidden;">
         </a>
-        <a href="https://github.com/wolflieu201105">
-            <img src="https://github.com/wolflieu201105.png" width="50" style="border-radius: 25px; overflow: hidden;">
+        <a href="https://github.com/jpisano05">
+            <img src="https://github.com/jpisano05.png" width="50" style="border-radius: 25px; overflow: hidden;">
         </a>
     </div>
